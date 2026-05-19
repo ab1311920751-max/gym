@@ -26,4 +26,15 @@ public class UserDTO {
         private String username;
         private String password;
     }
+
+    @Data
+    public static class UpdateProfileReq {
+        private String username;
+    }
+
+    @Data
+    public static class ChangePasswordReq {
+        private String oldPassword;
+        private String newPassword;
+    }
 }

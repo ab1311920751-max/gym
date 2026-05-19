@@ -159,6 +159,46 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, SysUser> implements
         this.updateById(user);
     }
 
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void updateProfile(Long userId, String username) {
+        Assert.notNull(userId, "用户ID不能为空");
+        Assert.notBlank(username, "昵称不能为空");
+
+        long count = this.count(new LambdaQueryWrapper<SysUser>()
+                .eq(SysUser::getUsername, username)
+                .ne(SysUser::getId, userId));
+        if (count > 0) {
+            throw new BusinessException(ErrorCode.BIZ_USERNAME_EXISTS);
+        }
+
+        this.update(new LambdaUpdateWrapper<SysUser>()
+                .set(SysUser::getUsername, username)
+                .eq(SysUser::getId, userId));
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void changePassword(Long userId, String oldPassword, String newPassword) {
+        Assert.notNull(userId, "用户ID不能为空");
+        Assert.notBlank(oldPassword, "原密码不能为空");
+        Assert.notBlank(newPassword, "新密码不能为空");
+
+        SysUser user = this.getById(userId);
+        if (user == null) {
+            throw new BusinessException(ErrorCode.BIZ_USER_NOT_FOUND);
+        }
+
+        if (!verifyPassword(oldPassword, user)) {
+            throw new BusinessException(ErrorCode.BIZ_PASSWORD_WRONG);
+        }
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+        this.update(new LambdaUpdateWrapper<SysUser>()
+                .set(SysUser::getPassword, user.getPassword())
+                .eq(SysUser::getId, userId));
+    }
+
     /**
      * 检查 VIP 是否过期并降级。
      */

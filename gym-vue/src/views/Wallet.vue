@@ -9,7 +9,10 @@
               {{ (user.username || 'U').charAt(0).toUpperCase() }}
             </div>
             <div class="profile-meta">
-              <div class="profile-name">{{ user.username || '—' }}</div>
+              <div class="profile-name-row">
+                <div class="profile-name">{{ user.username || '—' }}</div>
+                <el-button class="edit-nickname-btn" :icon="Edit" circle size="small" @click="showNicknameDialog" />
+              </div>
               <el-tag size="small" :type="VIP_TAG_TYPE[user.vipType || 0]" effect="light">
                 {{ VIP_LABEL[user.vipType || 0] }}
               </el-tag>
@@ -26,6 +29,10 @@
           </div>
           <div v-else class="vip-tip">
             暂未开通 VIP，开通后可享 9 折 / 8 折购课优惠
+          </div>
+
+          <div class="password-link-row">
+            <el-button link type="primary" size="small" @click="showPasswordDialog">修改密码</el-button>
           </div>
         </el-card>
       </el-col>
@@ -147,6 +154,38 @@
         <el-button type="primary" @click="handleAlipay">前往支付</el-button>
       </template>
     </el-dialog>
+
+    <!-- 昵称修改弹窗 -->
+    <el-dialog v-model="nicknameDialogVisible" title="修改昵称" width="420px" align-center>
+      <el-form :model="nicknameForm" :rules="nicknameRules" ref="nicknameFormRef" label-position="top">
+        <el-form-item label="新昵称" prop="username">
+          <el-input v-model="nicknameForm.username" placeholder="请输入新昵称" maxlength="20" show-word-limit />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="nicknameDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleUpdateProfile">确认修改</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 密码修改弹窗 -->
+    <el-dialog v-model="passwordDialogVisible" title="修改密码" width="420px" align-center>
+      <el-form :model="passwordForm" :rules="passwordRules" ref="passwordFormRef" label-position="top">
+        <el-form-item label="原密码" prop="oldPassword">
+          <el-input v-model="passwordForm.oldPassword" type="password" show-password placeholder="请输入原密码" />
+        </el-form-item>
+        <el-form-item label="新密码" prop="newPassword">
+          <el-input v-model="passwordForm.newPassword" type="password" show-password placeholder="请输入新密码（至少6位）" />
+        </el-form-item>
+        <el-form-item label="确认新密码" prop="confirmPassword">
+          <el-input v-model="passwordForm.confirmPassword" type="password" show-password placeholder="请再次输入新密码" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="passwordDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleChangePassword">确认修改</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -158,11 +197,12 @@ import {
   Medal,
   Calendar,
   Trophy,
-  AlarmClock
+  AlarmClock,
+  Edit
 } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import dayjs from 'dayjs'
-import { getUserById, buyVip } from '../api/user'
+import { getUserById, buyVip, updateProfile, changePassword } from '../api/user'
 import { buildPayUrl, confirmRecharge } from '../api/alipay'
 import { VIP_TYPE, VIP_LABEL, VIP_TAG_TYPE, VIP_PRICE } from '../constants/vip'
 
@@ -183,6 +223,39 @@ const rechargeRules = {
       },
       trigger: 'blur'
     }
+  ]
+}
+
+const nicknameDialogVisible = ref(false)
+const nicknameFormRef = ref(null)
+const nicknameForm = reactive({ username: '' })
+const nicknameRules = {
+  username: [
+    { required: true, message: '请输入新昵称', trigger: 'blur' },
+    { min: 1, max: 20, message: '昵称长度在 1 到 20 个字符', trigger: 'blur' },
+    { pattern: /^\S+$/, message: '昵称不能包含空格', trigger: 'blur' }
+  ]
+}
+
+const passwordDialogVisible = ref(false)
+const passwordFormRef = ref(null)
+const passwordForm = reactive({ oldPassword: '', newPassword: '', confirmPassword: '' })
+const validateConfirmPassword = (rule, value, cb) => {
+  if (value !== passwordForm.newPassword) {
+    cb(new Error('两次输入的密码不一致'))
+  } else {
+    cb()
+  }
+}
+const passwordRules = {
+  oldPassword: [{ required: true, message: '请输入原密码', trigger: 'blur' }],
+  newPassword: [
+    { required: true, message: '请输入新密码', trigger: 'blur' },
+    { min: 6, message: '密码长度不能少于6位', trigger: 'blur' }
+  ],
+  confirmPassword: [
+    { required: true, message: '请再次输入新密码', trigger: 'blur' },
+    { validator: validateConfirmPassword, trigger: 'blur' }
   ]
 }
 
@@ -230,6 +303,7 @@ const handleAlipay = async () => {
   })
   window.open(payUrl, '_blank')
   dialogVisible.value = false
+  const currentAmount = rechargeForm.amount
 
   try {
     await ElMessageBox.confirm('支付完成后请点击确认刷新余额', '支付确认', {
@@ -237,8 +311,20 @@ const handleAlipay = async () => {
       cancelButtonText: '遇到问题',
       type: 'success'
     })
-    loadUser()
-    window.dispatchEvent(new Event('refresh-user'))
+    try {
+      const res = await confirmRecharge({
+        out_trade_no: String(traceNo),
+        total_amount: currentAmount
+      })
+      if (res.code === '200') {
+        ElMessage.success(`充值 ${currentAmount} 元到账成功`)
+        loadUser()
+        window.dispatchEvent(new Event('refresh-user'))
+      }
+    } catch (e) {
+      console.error(e)
+      ElMessage.error('充值确认失败，请联系管理员')
+    }
   } catch {
     /* user cancelled */
   }
@@ -259,6 +345,7 @@ const checkPayCallback = async () => {
     }
   } catch (e) {
     console.error(e)
+    ElMessage.error('充值确认失败，请检查网络后重试')
   }
 }
 
@@ -287,6 +374,49 @@ const handleBuyVip = (type) => {
       }
     })
     .catch(() => {})
+}
+
+const showNicknameDialog = () => {
+  nicknameForm.username = user.value.username || ''
+  nicknameDialogVisible.value = true
+}
+
+const handleUpdateProfile = async () => {
+  try {
+    await nicknameFormRef.value.validate()
+  } catch { return }
+  try {
+    await updateProfile({ username: nicknameForm.username })
+    ElMessage.success('昵称修改成功')
+    nicknameDialogVisible.value = false
+    loadUser()
+    window.dispatchEvent(new Event('refresh-user'))
+  } catch (e) {
+    console.error(e)
+  }
+}
+
+const showPasswordDialog = () => {
+  passwordForm.oldPassword = ''
+  passwordForm.newPassword = ''
+  passwordForm.confirmPassword = ''
+  passwordDialogVisible.value = true
+}
+
+const handleChangePassword = async () => {
+  try {
+    await passwordFormRef.value.validate()
+  } catch { return }
+  try {
+    await changePassword({
+      oldPassword: passwordForm.oldPassword,
+      newPassword: passwordForm.newPassword
+    })
+    ElMessage.success('密码修改成功，请牢记新密码')
+    passwordDialogVisible.value = false
+  } catch (e) {
+    console.error(e)
+  }
 }
 
 onMounted(async () => {
@@ -598,5 +728,25 @@ onMounted(async () => {
   color: #909399;
   font-size: 12px;
   margin-top: 8px;
+}
+
+.profile-name-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.edit-nickname-btn {
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.profile-row:hover .edit-nickname-btn {
+  opacity: 1;
+}
+
+.password-link-row {
+  margin-top: 12px;
+  text-align: right;
 }
 </style>

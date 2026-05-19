@@ -200,3 +200,6 @@ PENDING(0) → PAID(1) → CANCELLED(2)
 - [后端模块文档](./gym-system/README.md)
 - [前端模块文档](./gym-vue/README.md)
 - [领域语言定义](./CONTEXT.md)
+
+买家账号：crrgvr8904@sandbox.com
+支付密码：111111

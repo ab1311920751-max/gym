@@ -57,6 +57,20 @@ public class UserController {
         return Result.success();
     }
 
+    @PutMapping("/profile")
+    public Result updateProfile(@CurrentUserId Long uid,
+                                 @RequestBody UserDTO.UpdateProfileReq req) {
+        userService.updateProfile(uid, req.getUsername());
+        return Result.success();
+    }
+
+    @PutMapping("/password")
+    public Result changePassword(@CurrentUserId Long uid,
+                                  @RequestBody UserDTO.ChangePasswordReq req) {
+        userService.changePassword(uid, req.getOldPassword(), req.getNewPassword());
+        return Result.success();
+    }
+
     @DeleteMapping("/{id}")
     public Result delete(@PathVariable Long id) {
         userService.removeById(id);

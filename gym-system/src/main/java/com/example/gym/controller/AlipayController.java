@@ -115,7 +115,11 @@ public class AlipayController {
     public Result rechargeSuccess(@CurrentUserId Long uid,
                                   @RequestBody Map<String, Object> params) {
         String traceNo = (String) params.get("out_trade_no");
-        BigDecimal amount = new BigDecimal(params.get("total_amount").toString());
+        Object totalAmountObj = params.get("total_amount");
+        if (totalAmountObj == null) {
+            return Result.error("缺少 total_amount 参数，请重新充值");
+        }
+        BigDecimal amount = new BigDecimal(totalAmountObj.toString());
 
         log.info("用户 {} 充值回调: 金额={}, 流水号={}", uid, amount, traceNo);
 

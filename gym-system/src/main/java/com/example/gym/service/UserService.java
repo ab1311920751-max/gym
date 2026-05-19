@@ -22,4 +22,8 @@ public interface UserService extends IService<SysUser> {
      * @param vipType 1-月卡(30元), 2-年卡(300元)
      */
     void buyVip(Long userId, Integer vipType);
+
+    void updateProfile(Long userId, String username);
+
+    void changePassword(Long userId, String oldPassword, String newPassword);
 }
