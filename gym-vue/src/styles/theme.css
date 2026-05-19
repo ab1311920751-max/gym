@@ -1,0 +1,57 @@
+:root {
+  --el-color-primary: #ff7a2f;
+  --el-color-primary-light-3: #ff9560;
+  --el-color-primary-light-5: #ffb088;
+  --el-color-primary-light-7: #ffcdb0;
+  --el-color-primary-light-8: #ffe0cc;
+  --el-color-primary-light-9: #fff0e6;
+  --el-color-primary-dark-2: #e66117;
+}
+
+.el-button--primary {
+  --el-button-bg-color: #ff7a2f;
+  --el-button-border-color: #ff7a2f;
+  --el-button-hover-bg-color: #ff9560;
+  --el-button-hover-border-color: #ff9560;
+  --el-button-active-bg-color: #e66117;
+  --el-button-active-border-color: #e66117;
+}
+
+.el-menu--dark .el-menu-item.is-active,
+.el-menu-item.is-active {
+  color: #ff7a2f !important;
+}
+
+.el-menu--dark .el-menu-item.is-active {
+  background-color: #1f2d3d !important;
+  border-left: 3px solid #ff7a2f;
+}
+
+.el-link.el-link--primary {
+  --el-link-text-color: #ff7a2f;
+  --el-link-hover-text-color: #ff9560;
+}
+
+.el-pagination.is-background .el-pager li.is-active {
+  background-color: #ff7a2f;
+  color: #fff;
+}
+
+.el-checkbox__input.is-checked .el-checkbox__inner {
+  background-color: #ff7a2f;
+  border-color: #ff7a2f;
+}
+
+.el-radio__input.is-checked .el-radio__inner {
+  border-color: #ff7a2f;
+  background: #ff7a2f;
+}
+
+.el-switch.is-checked .el-switch__core {
+  background-color: #ff7a2f;
+  border-color: #ff7a2f;
+}
+
+.el-input__wrapper.is-focus {
+  box-shadow: 0 0 0 1px #ff7a2f inset !important;
+}

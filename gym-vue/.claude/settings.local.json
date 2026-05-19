@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find \"d:\\\\Workspace\\\\code-test\\\\Gym\\\\gym-system\" -path \"*/common/exception/*\" -name \"*.java\" 2>/dev/null)",
+      "Read(//d/Workspace/code-test/Gym/gym-system/**)",
+      "Bash(find \"d:\\\\Workspace\\\\code-test\\\\Gym\\\\gym-system\" -name \"*DTO.java\" -o -name \"*Req.java\" 2>/dev/null | head -10)",
+      "Read(//d/Workspace/code-test/Gym/gym-system/src/main/java/com/example/gym/service/**)"
+    ]
+  }
+}

@@ -1,0 +1,63 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: gym-system
+  datasource:
+    # 驱动类
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    # 数据库连接地址
+    url: jdbc:mysql://localhost:3306/gym_db?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: root
+    password: 123456  # <---【⚠️ 请务必确认这里是你的数据库密码】
+
+    # --- HikariCP 连接池配置 ---
+    type: com.zaxxer.hikari.HikariDataSource
+    hikari:
+      minimum-idle: 5
+      maximum-pool-size: 15
+      auto-commit: true
+      idle-timeout: 30000
+      pool-name: GymHikariCP
+      max-lifetime: 600000
+      connection-test-query: SELECT 1
+      validation-timeout: 3000
+
+# MyBatis-Plus 配置
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl # 控制台打印 SQL
+    map-underscore-to-camel-case: true # 开启驼峰命名转换
+  global-config:
+    db-config:
+      id-type: auto # 主键策略：自增
+
+# --- 🔥 新增：支付宝沙箱配置 ---
+alipay:
+  # 1. 你的沙箱 APPID (去支付宝开放平台沙箱环境看)
+  app-id: 2021000148603415
+
+  # 2. 你的应用私钥 (Merchant Private Key) - 只有你自己知道，不要给别人
+  # 注意：YAML中如果秘钥包含换行，要么弄成一行，要么用引号包裹
+  app-private-key: MIIEvwIBADANBgkqhkiG9w0BAQEFAASCBKkwggSlAgEAAoIBAQC6B9vvZxlDdz7h7UxwowgK3rCQjkAeHccEFqxi4tz2zBzURoynvZ70AlCxZaTwL7QmGp/Lak1Zsb+d0ctDhEo1nsaG7f3UBZsvNbQ9zh+pCMLX1gFqDWA/dQLRqsQb+XfJddxaEOKhu31Kflpl3szmvZC5ilnuAwN9qUuPfFzokJSmOBtn677zmZxhsJBuxhBDiQebNPtK9egtatGqQYBjBoOTg3mIzaYXTlGKXWnLj75DRLRigSEMJPKsqSP9HP9zbIJGqml5/d5AxfQM03Tmp2AWMzBBUbzRaI+ex8BiSOmCAPOLc5kN3m1WcXhnJUxlFdcaBS8QVXLwD3R56syTAgMBAAECggEBAIMSxoQHwGUov8WvzQwP0rrV7NHtaH/Pu0nGL+/8qHO7nRR0IOaPVE/Y0cIsO+p/sg6m86//VkC8XKZ2CyGnNCJTnM21IgMhcBXzYOurL+OJqL8qqhRvGEGd0D6qc0LCowPvZzKOcyBBWiYCoO7l7LknF7GjKXnp5avEfNi8Zzn0bZUd6vjDbqZBodRSk5PDAee/qK7vTKHqEvMkph6fISDKCRcbMK1KiPto94Vd79BN42gFsUZ5AxpkBpxmYP0x96oqsWZBvdkvNWnwtaezl5avT3Xl5NYhODQr/gXB/5+GOVxoJRGZTLPm2ZaQqRFPaHXGU1QmnfbfXrm8gxFUHAECgYEA/q3hjjfxWYCJs26IAPmqf1643v2u0I69H9/SuetWTcRSXBniLXI0sXW86Po5Prd4iScK28tjZ/zAbOQrZGTn5/T7eVdA5ZvBDFCyg44Y5B1TfvEVS9TIak9xj7tdBNrNxhcBiVnW4KvJFBYt1vuzAmfCIwG41TzDLl9bhyRl3yMCgYEAuv7Wo8UZOWYFZeagccuOwtz/nOoIDeZRrmq8UkW4SHEMRXNlpRmj1NeT9vE989NZcud8O98WN/oQbPGT8FyrqYWzw9RXCrn5UvOXFBuBnxl6V81b1kDcRRVeJncFOahyTrDjYEsrAtJGPQ614imrcvEuZbYMNMMWUTMOxx1Ua9ECgYEAjnFUeYXikGurGNeWa+04JjslbVs33mAneV9nbiMpRx+p7OdxMHfy7tpqSWhCgkh9u0BB+4L7W1rriTvo5SLm7j6ANHLP0lxWEfxEi/37AANDAvn2Lk6ZtZQvcPObaC607rlJW7gKzehm87wf8WEf0xWTaJ768REmHZaqC6EY9T8CgYAD3QP+OjI9N1hhNJSYBUabzAkT6tnjv6BsZBQj9wDJrlw8ixfMg20ZFqMd9Pn8sZ8lepbcfc1ttqLkPVF7I88AH50JLLfnptP53MKATdktuk8GxV1iXdCvNLPPQ6I+ALbr3Ue1U5g95K5C0Kz9UTMTmtwEifBSnr01TEK/5mE6IQKBgQDAyyMDGYL/LTChciiOUekMPUs4RtM1Q+xkZ2jZlJJQ+pZ7hidT3j95aoJPPg+d/jHxcA1iYSdK1/CF3DzDQoyVvdEduXESrnGMY7JRTgZjDdCrcuOX1PD8LjZYMIhmdlzbofVQcCuevxpRfud+CmdKXnDAggAUJ+ia2RCaspo9Gw==
+
+  # 3. 支付宝公钥 (Alipay Public Key) - 注意不是应用公钥！是支付宝给你的那个
+  alipay-public-key: MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEApAOECNOnMkLmun6v0iciaJz0eY4bgsNCYVBu5NMTM/6yAOp9Un30yR2GVK6zTpljAyGPzPaWscucXyzr3J+s8rySjeqCIhbOsUuiOPCsm8PC0HiLQupmmVOp/rrfcRDV4lLg5P/EL44V4zDbNgZF5eKJsvjCKju+7pFZ92K4PZVR3+fzbvaZ/m61vA5gR4LWk+3EmTWpitjM977nRYd7mBnnqDgUez7fUUhnXPKH87qBZBNRtZcNp6JN1vsvk12Bc8/yl24Kciu3Rtg/aSHuaoRbJsrms5FCNrAfWG4X5xh3wp3+QfmQzU0a+GtVUdx3J3+YmUMFWOSdmEq5Bm2TzwIDAQAB
+
+  # 4. 支付成功后的前端跳转页面 (根据你的 Vue 路由调整)
+  return-url: http://localhost:5173/pay/success
+
+  # 5. 异步通知地址 (选填，本地开发通常收不到，毕设演示可忽略)
+  notify-url: http://localhost:8080/alipay/notify
+
+# --- 🔥 新增：DeepSeek AI 配置（OpenAI 兼容协议）---
+deepseek:
+  # 总开关，false 时直接走本地规则 AI
+  enabled: true
+  # 优先读环境变量 DEEPSEEK_API_KEY，未设置时使用 yml 默认值（生产建议清空默认值）
+  api-key: ${DEEPSEEK_API_KEY:sk-0970049806894638b14ae677773169a0}
+  base-url: https://api.deepseek.com
+  model: deepseek-chat
+  timeout-ms: 15000
+  temperature: 0.7
