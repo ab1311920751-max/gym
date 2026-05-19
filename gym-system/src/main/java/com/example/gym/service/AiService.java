@@ -1,18 +1,18 @@
 package com.example.gym.service;
 
-import java.util.Map;
+import com.example.gym.vo.AiChatMessageVO;
+import com.example.gym.vo.AiChatSessionVO;
+
+import java.util.List;
 
 public interface AiService {
-    /**
-     * 获取 AI 对话响应
-     * @param userId 用户ID
-     * @param message 用户发来的消息
-     * @return AI 的回复内容
-     */
-    String chat(Long userId, String message);
+    AiChatMessageVO chat(Long userId, Long sessionId, String message);
 
-    /**
-     * (Debug用) 获取组装好的上下文提示词
-     */
+    List<AiChatSessionVO> getSessions(Long userId);
+
+    List<AiChatMessageVO> getMessages(Long userId, Long sessionId);
+
+    void deleteSession(Long userId, Long sessionId);
+
     String getContextPrompt(Long userId);
 }

@@ -56,7 +56,7 @@ deepseek:
   # 总开关，false 时直接走本地规则 AI
   enabled: true
   # 优先读环境变量 DEEPSEEK_API_KEY，未设置时使用 yml 默认值（生产建议清空默认值）
-  api-key: ${DEEPSEEK_API_KEY:sk-0970049806894638b14ae677773169a0}
+  api-key: ${DEEPSEEK_API_KEY:sk-09295dde30184704a6183d85558e27b2}
   base-url: https://api.deepseek.com
   model: deepseek-chat
   timeout-ms: 15000

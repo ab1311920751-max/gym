@@ -42,6 +42,11 @@
             <span>我的钱包</span>
           </el-menu-item>
 
+          <el-menu-item index="/ai-chat">
+            <el-icon><Service /></el-icon>
+            <span>AI 客服</span>
+          </el-menu-item>
+
           <el-sub-menu index="admin" v-if="user.role === ROLE.ADMIN">
             <template #title>
               <el-icon><Setting /></el-icon>
@@ -123,6 +128,7 @@ import {
   Calendar,
   List,
   Wallet,
+  Service,
   Setting,
   ArrowDown,
   User,

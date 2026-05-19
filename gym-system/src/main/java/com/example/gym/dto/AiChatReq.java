@@ -4,6 +4,6 @@ import lombok.Data;
 
 @Data
 public class AiChatReq {
-    private Long userId;
+    private Long sessionId;
     private String message;
 }

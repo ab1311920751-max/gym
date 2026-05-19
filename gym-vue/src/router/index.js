@@ -12,6 +12,7 @@ const routes = [
       { path: 'course', name: 'Course', component: () => import('../views/Course.vue') },
       { path: 'my-booking', name: 'MyBooking', component: () => import('../views/MyBooking.vue') },
       { path: 'wallet', name: 'Wallet', component: () => import('../views/Wallet.vue') },
+      { path: 'ai-chat', name: 'AiChat', component: () => import('../views/AiChat.vue') },
       {
       path: '/pay/success',
       name: 'PaySuccess',

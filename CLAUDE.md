@@ -100,7 +100,7 @@ config/      → AliPayConfig、CorsConfig
 
 ## 前端架构
 
-> `src/components/HelloWorld.vue` 是 Vite 脚手架默认代码，未被任何页面引用，可以删除。
+> `src/components/` 目录当前为空（`HelloWorld.vue` 脚手架代码已删除）。
 
 ### 路由与权限
 
@@ -113,7 +113,7 @@ config/      → AliPayConfig、CorsConfig
 
 ### API 调用
 
-所有 HTTP 调用经过 `src/utils/request.js`（Axios 实例 + token 注入 + 错误拦截）。注意：`src/api/` 和 `src/constants/` 目录目前**不存在**，视图层直接调用 `request.js`，代码散落在各个 `.vue` 文件中。新增页面时优先建好 `api/` 与 `constants/` 目录，再写视图，不要把 axios 调用零散写进 `.vue`。
+所有 HTTP 调用经过 `src/utils/request.js`（Axios 实例 + token 注入 + 错误拦截）。API 调用已收拢到 `src/api/`（按模块拆分，如 `auth.js`、`booking.js`、`course.js`），常量定义在 `src/constants/`（如 `booking.js`、`vip.js`、`role.js`）。新增页面时遵循此约定，不要把 axios 调用零散写进 `.vue`。
 
 `request.js` 响应拦截器中 `res.code === '200'` 是**字符串**比较（不是数字），定义新接口时 code 字段务必返回字符串 `"200"`。401 时清除 localStorage 并跳 `/login`。
 
