@@ -1,5 +1,8 @@
 <template>
-  <div class="dashboard-container">
+  <div v-if="!isAdmin" class="user-home-wrapper">
+    <UserHome />
+  </div>
+  <div v-else class="dashboard-container">
     <div class="page-header">
       <h2 class="page-title">运营数据驾驶舱</h2>
       <p class="page-subtitle">实时监控系统核心指标</p>
@@ -77,6 +80,12 @@ import {
 import * as echarts from 'echarts'
 import { getDashboard } from '../api/report'
 import { CHART_COLORS } from '../constants/theme'
+import { ROLE } from '../constants/role'
+import UserHome from './UserHome.vue'
+
+const userStr = localStorage.getItem('user')
+const user = userStr ? JSON.parse(userStr) : {}
+const isAdmin = computed(() => user.role === ROLE.ADMIN)
 
 const report = ref({})
 const loading = ref(true)
@@ -137,13 +146,13 @@ const loadData = async () => {
   try {
     const res = await getDashboard()
     report.value = res.data || {}
-    await nextTick()
-    renderPie()
   } catch (e) {
     console.error(e)
   } finally {
     loading.value = false
   }
+  await nextTick()
+  renderPie()
 }
 
 const renderPie = () => {
@@ -186,14 +195,18 @@ const handleResize = () => {
 }
 
 onMounted(() => {
-  loadData()
-  window.addEventListener('resize', handleResize)
+  if (isAdmin.value) {
+    loadData()
+    window.addEventListener('resize', handleResize)
+  }
 })
 
 onBeforeUnmount(() => {
-  window.removeEventListener('resize', handleResize)
-  pieInstance?.dispose()
-  pieInstance = null
+  if (isAdmin.value) {
+    window.removeEventListener('resize', handleResize)
+    pieInstance?.dispose()
+    pieInstance = null
+  }
 })
 </script>
 
