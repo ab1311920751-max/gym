@@ -1,14 +1,14 @@
 # Gym Pro - 智能健身预约系统
 
-一个前后端分离的智能健身房管理系统，支持课程预约、支付宝支付、VIP 会员、AI 智能教练和数据驾驶舱等功能。
+前后端分离的健身房管理系统，支持课程预约、支付宝支付、VIP 会员、AI 客服和数据驾驶舱。
 
 ## 项目结构
 
 ```
-Gym/
+gym/
 ├── gym-system/          # 后端：Spring Boot 3 + MyBatis-Plus
 ├── gym-vue/             # 前端：Vue 3 + Vite + Element Plus
-├── docs/                # 架构决策记录 (ADR)
+├── docs/                # 架构决策记录 (ADR 0001–0005)
 ├── CONTEXT.md           # 领域语言定义
 └── README.md
 ```
@@ -17,12 +17,13 @@ Gym/
 
 | 模块 | 功能 |
 |------|------|
-| 用户认证 | 登录/注册、BCrypt 密码加密、JWT Token 鉴权、路由守卫 |
-| 课程预约 | 课程浏览、高并发抢课（分布式锁）、库存扣减 |
+| 用户认证 | 登录/注册、BCrypt 密码加密、JWT 鉴权、路由守卫 |
+| 课程预约 | 课程浏览、高并发抢课（Redisson 分布式锁）、库存扣减 |
 | 订单支付 | 余额支付、支付宝沙箱支付、订单取消/退款 |
-| VIP 会员 | 月卡/年卡购买与续费、VIP 折扣（策略模式）、到期自动降级 |
-| AI 教练 | 上下文感知的智能对话、课程推荐、余额查询 |
-| 数据驾驶舱 | 营收/用户/订单总览、会员分布饼图、营收趋势图 |
+| VIP 会员 | 月卡/年卡购买与续费、策略模式折扣、到期自动降级 |
+| AI 客服 | 本地规则匹配对话、课程推荐、余额查询（预留 LLM 扩展点） |
+| 角色首页 | 管理员看运营数据驾驶舱，普通用户看轮播图 + 热门课程 |
+| 数据驾驶舱 | KPI 卡片、VIP 会员分布饼图、业务概览（管理员专享） |
 | 后台管理 | 用户管理（CRUD、余额调整）、课程管理（CRUD） |
 
 ## 技术栈
@@ -72,8 +73,8 @@ mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS gym_db DEFAULT CHARACTER SET 
 # 导入数据
 mysql -u root -p gym_db < gym-vue/db_backups/gym_db4.sql
 
-# 执行迁移脚本（密码字段扩展 + 状态注释修正）
-mysql -u root -p gym_db < gym-vue/db_backups/migrate_v2.sql
+# 执行 AI 客服功能迁移脚本（首次部署需执行）
+mysql -u root -p gym_db < gym-vue/db_backups/migrate_ai.sql
 ```
 
 ### 2. 启动后端
@@ -195,11 +196,7 @@ PENDING(0) → PAID(1) → CANCELLED(2)
 | 0004 | 订单状态 | 使用枚举替代魔法数字 |
 | 0005 | Mapper 返回值 | VO 替代 Map |
 
-## 各模块详细文档
+## 模块文档
 
-- [后端模块文档](./gym-system/README.md)
-- [前端模块文档](./gym-vue/README.md)
 - [领域语言定义](./CONTEXT.md)
-
-买家账号：crrgvr8904@sandbox.com
-支付密码：111111
+- [架构决策记录](./docs/adr/)
