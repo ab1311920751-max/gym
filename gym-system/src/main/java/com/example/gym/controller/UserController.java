@@ -46,8 +46,8 @@ public class UserController {
      * 管理员新增用户。register 内部会强制覆盖 role/balance/vipType，前端注入无效。
      */
     @PostMapping
-    public Result save(@RequestBody SysUser user) {
-        userService.register(user);
+    public Result save(@RequestBody UserDTO.RegisterReq req) {
+        userService.register(req);
         return Result.success();
     }
 
@@ -60,7 +60,7 @@ public class UserController {
     @PutMapping("/profile")
     public Result updateProfile(@CurrentUserId Long uid,
                                  @RequestBody UserDTO.UpdateProfileReq req) {
-        userService.updateProfile(uid, req.getUsername());
+        userService.updateProfile(uid, req);
         return Result.success();
     }
 

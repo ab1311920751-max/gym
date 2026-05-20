@@ -34,6 +34,21 @@
           <div class="password-link-row">
             <el-button link type="primary" size="small" @click="showPasswordDialog">修改密码</el-button>
           </div>
+
+          <div class="profile-details">
+            <div class="profile-detail" v-if="user.phone">
+              <span class="detail-icon">📱</span>
+              <span>{{ user.phone }}</span>
+            </div>
+            <div class="profile-detail" v-if="user.email">
+              <span class="detail-icon">📧</span>
+              <span>{{ user.email }}</span>
+            </div>
+            <div class="profile-detail" v-if="user.gender != null && user.gender !== 0">
+              <span class="detail-icon">{{ user.gender === 1 ? '♂' : '♀' }}</span>
+              <span>{{ user.gender === 1 ? '男' : '女' }}</span>
+            </div>
+          </div>
         </el-card>
       </el-col>
 
@@ -155,11 +170,24 @@
       </template>
     </el-dialog>
 
-    <!-- 昵称修改弹窗 -->
-    <el-dialog v-model="nicknameDialogVisible" title="修改昵称" width="420px" align-center>
+    <!-- 个人资料编辑弹窗 -->
+    <el-dialog v-model="nicknameDialogVisible" title="编辑个人资料" width="440px" align-center>
       <el-form :model="nicknameForm" :rules="nicknameRules" ref="nicknameFormRef" label-position="top">
-        <el-form-item label="新昵称" prop="username">
-          <el-input v-model="nicknameForm.username" placeholder="请输入新昵称" maxlength="20" show-word-limit />
+        <el-form-item label="用户名" prop="username">
+          <el-input v-model="nicknameForm.username" placeholder="请输入用户名" maxlength="20" show-word-limit />
+        </el-form-item>
+        <el-form-item label="手机号" prop="phone">
+          <el-input v-model="nicknameForm.phone" placeholder="请输入手机号（选填）" maxlength="11" />
+        </el-form-item>
+        <el-form-item label="性别" prop="gender">
+          <el-radio-group v-model="nicknameForm.gender">
+            <el-radio :value="null">保密</el-radio>
+            <el-radio :value="1">男</el-radio>
+            <el-radio :value="2">女</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="邮箱" prop="email">
+          <el-input v-model="nicknameForm.email" placeholder="请输入邮箱（选填）" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -228,12 +256,18 @@ const rechargeRules = {
 
 const nicknameDialogVisible = ref(false)
 const nicknameFormRef = ref(null)
-const nicknameForm = reactive({ username: '' })
+const nicknameForm = reactive({ username: '', phone: '', gender: null, email: '' })
 const nicknameRules = {
   username: [
-    { required: true, message: '请输入新昵称', trigger: 'blur' },
-    { min: 1, max: 20, message: '昵称长度在 1 到 20 个字符', trigger: 'blur' },
-    { pattern: /^\S+$/, message: '昵称不能包含空格', trigger: 'blur' }
+    { required: true, message: '请输入用户名', trigger: 'blur' },
+    { min: 1, max: 20, message: '用户名长度在 1 到 20 个字符', trigger: 'blur' },
+    { pattern: /^\S+$/, message: '不能包含空格', trigger: 'blur' }
+  ],
+  phone: [
+    { pattern: /^1[3-9]\d{9}$/, message: '请输入有效的手机号', trigger: 'blur' }
+  ],
+  email: [
+    { type: 'email', message: '请输入有效的邮箱地址', trigger: 'blur' }
   ]
 }
 
@@ -378,6 +412,9 @@ const handleBuyVip = (type) => {
 
 const showNicknameDialog = () => {
   nicknameForm.username = user.value.username || ''
+  nicknameForm.phone = user.value.phone || ''
+  nicknameForm.gender = user.value.gender != null ? user.value.gender : null
+  nicknameForm.email = user.value.email || ''
   nicknameDialogVisible.value = true
 }
 
@@ -386,8 +423,13 @@ const handleUpdateProfile = async () => {
     await nicknameFormRef.value.validate()
   } catch { return }
   try {
-    await updateProfile({ username: nicknameForm.username })
-    ElMessage.success('昵称修改成功')
+    await updateProfile({
+      username: nicknameForm.username,
+      phone: nicknameForm.phone || undefined,
+      gender: nicknameForm.gender,
+      email: nicknameForm.email || undefined
+    })
+    ElMessage.success('个人资料修改成功')
     nicknameDialogVisible.value = false
     loadUser()
     window.dispatchEvent(new Event('refresh-user'))
@@ -748,5 +790,26 @@ onMounted(async () => {
 .password-link-row {
   margin-top: 12px;
   text-align: right;
+}
+
+.profile-details {
+  margin-top: 10px;
+  border-top: 1px solid #f0f0f0;
+  padding-top: 12px;
+}
+
+.profile-detail {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 13px;
+  color: #606266;
+}
+
+.detail-icon {
+  font-size: 14px;
+  width: 20px;
+  text-align: center;
 }
 </style>

@@ -1,6 +1,7 @@
 package com.example.gym.controller;
 
 import com.example.gym.common.Result;
+import com.example.gym.dto.UserDTO;
 import com.example.gym.entity.SysUser;
 import com.example.gym.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -22,8 +23,8 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public Result register(@RequestBody SysUser user) {
-        userService.register(user);
+    public Result register(@RequestBody UserDTO.RegisterReq req) {
+        userService.register(req);
         return Result.success();
     }
 }

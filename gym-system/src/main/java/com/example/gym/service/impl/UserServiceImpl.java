@@ -2,12 +2,14 @@ package com.example.gym.service.impl;
 
 import cn.hutool.core.lang.Assert;
 import cn.hutool.core.map.MapUtil;
+import cn.hutool.core.util.StrUtil;
 import cn.hutool.jwt.JWTUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.gym.common.exception.BusinessException;
 import com.example.gym.common.exception.ErrorCode;
+import com.example.gym.dto.UserDTO;
 import com.example.gym.entity.SysUser;
 import com.example.gym.mapper.UserMapper;
 import com.example.gym.service.UserService;
@@ -89,24 +91,33 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, SysUser> implements
     }
 
     @Override
-    public void register(SysUser user) {
-        Assert.notBlank(user.getUsername(), "用户名不能为空");
-        Assert.notBlank(user.getPassword(), "密码不能为空");
+    public void register(UserDTO.RegisterReq req) {
+        Assert.notBlank(req.getUsername(), "用户名不能为空");
+        Assert.notBlank(req.getPassword(), "密码不能为空");
 
         long count = this.count(new LambdaQueryWrapper<SysUser>()
-                .eq(SysUser::getUsername, user.getUsername()));
+                .eq(SysUser::getUsername, req.getUsername()));
         if (count > 0) {
             throw new BusinessException(ErrorCode.BIZ_USERNAME_EXISTS);
         }
 
-        // 防止前端注入 role / balance / vipType（阶段 2 改用 RegisterReq DTO 后可删）
+        if (req.getGender() != null) {
+            Assert.isTrue(req.getGender() >= 0 && req.getGender() <= 2, "性别参数无效");
+        }
+
+        SysUser user = new SysUser();
+        user.setUsername(req.getUsername());
+        user.setPassword(passwordEncoder.encode(req.getPassword()));
+        user.setNickname(req.getNickname());
+        user.setPhone(req.getPhone());
+        user.setGender(req.getGender());
+        user.setEmail(req.getEmail());
         user.setRole("user");
         user.setBalance(BigDecimal.ZERO);
         user.setVipType(0);
         user.setVipExpireTime(null);
         user.setCreateTime(LocalDateTime.now());
 
-        user.setPassword(passwordEncoder.encode(user.getPassword()));
         this.save(user);
     }
 
@@ -161,20 +172,49 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, SysUser> implements
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void updateProfile(Long userId, String username) {
+    public void updateProfile(Long userId, UserDTO.UpdateProfileReq req) {
         Assert.notNull(userId, "用户ID不能为空");
-        Assert.notBlank(username, "昵称不能为空");
 
-        long count = this.count(new LambdaQueryWrapper<SysUser>()
-                .eq(SysUser::getUsername, username)
-                .ne(SysUser::getId, userId));
-        if (count > 0) {
-            throw new BusinessException(ErrorCode.BIZ_USERNAME_EXISTS);
+        LambdaUpdateWrapper<SysUser> wrapper = new LambdaUpdateWrapper<>();
+        wrapper.eq(SysUser::getId, userId);
+
+        boolean hasUpdate = false;
+
+        if (StrUtil.isNotBlank(req.getUsername())) {
+            long count = this.count(new LambdaQueryWrapper<SysUser>()
+                    .eq(SysUser::getUsername, req.getUsername())
+                    .ne(SysUser::getId, userId));
+            if (count > 0) {
+                throw new BusinessException(ErrorCode.BIZ_USERNAME_EXISTS);
+            }
+            wrapper.set(SysUser::getUsername, req.getUsername());
+            hasUpdate = true;
         }
 
-        this.update(new LambdaUpdateWrapper<SysUser>()
-                .set(SysUser::getUsername, username)
-                .eq(SysUser::getId, userId));
+        if (req.getNickname() != null) {
+            wrapper.set(SysUser::getNickname, req.getNickname());
+            hasUpdate = true;
+        }
+
+        if (req.getPhone() != null) {
+            wrapper.set(SysUser::getPhone, req.getPhone());
+            hasUpdate = true;
+        }
+
+        if (req.getGender() != null) {
+            Assert.isTrue(req.getGender() >= 0 && req.getGender() <= 2, "性别参数无效");
+            wrapper.set(SysUser::getGender, req.getGender());
+            hasUpdate = true;
+        }
+
+        if (req.getEmail() != null) {
+            wrapper.set(SysUser::getEmail, req.getEmail());
+            hasUpdate = true;
+        }
+
+        if (hasUpdate) {
+            this.update(wrapper);
+        }
     }
 
     @Override

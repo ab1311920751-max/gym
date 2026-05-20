@@ -42,6 +42,28 @@
           </template>
         </el-table-column>
 
+        <el-table-column label="性别" width="70">
+          <template #default="{ row }">
+            <span v-if="row.gender === 1">男</span>
+            <span v-else-if="row.gender === 2">女</span>
+            <span v-else class="muted">—</span>
+          </template>
+        </el-table-column>
+
+        <el-table-column prop="phone" label="手机" width="140">
+          <template #default="{ row }">
+            <span v-if="row.phone">{{ row.phone }}</span>
+            <span v-else class="muted">—</span>
+          </template>
+        </el-table-column>
+
+        <el-table-column prop="email" label="邮箱" min-width="180" show-overflow-tooltip>
+          <template #default="{ row }">
+            <span v-if="row.email">{{ row.email }}</span>
+            <span v-else class="muted">—</span>
+          </template>
+        </el-table-column>
+
         <el-table-column label="余额" width="120">
           <template #default="{ row }">
             <span class="balance">￥{{ Number(row.balance || 0).toFixed(2) }}</span>
@@ -141,6 +163,19 @@
           <div class="form-tip">
             直接修改等级不会自动更新到期时间，建议让用户在前台支付开通。
           </div>
+        </el-form-item>
+        <el-form-item label="手机号">
+          <el-input v-model="form.phone" placeholder="请输入手机号" />
+        </el-form-item>
+        <el-form-item label="性别">
+          <el-radio-group v-model="form.gender">
+            <el-radio :value="null">未知</el-radio>
+            <el-radio :value="1">男</el-radio>
+            <el-radio :value="2">女</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="邮箱">
+          <el-input v-model="form.email" placeholder="请输入邮箱" />
         </el-form-item>
       </el-form>
       <template #footer>

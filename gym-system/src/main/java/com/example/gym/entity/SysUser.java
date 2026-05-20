@@ -26,4 +26,12 @@ public class SysUser {
     private LocalDateTime vipExpireTime;
 
     private LocalDateTime createTime;
+
+    private String nickname;
+
+    private String phone;
+
+    private Integer gender;
+
+    private String email;
 }

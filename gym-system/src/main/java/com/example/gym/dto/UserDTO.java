@@ -28,8 +28,22 @@ public class UserDTO {
     }
 
     @Data
+    public static class RegisterReq {
+        private String username;
+        private String password;
+        private String nickname;
+        private String phone;
+        private Integer gender;
+        private String email;
+    }
+
+    @Data
     public static class UpdateProfileReq {
         private String username;
+        private String nickname;
+        private String phone;
+        private Integer gender;
+        private String email;
     }
 
     @Data

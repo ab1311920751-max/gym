@@ -1,13 +1,14 @@
 package com.example.gym.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.example.gym.dto.UserDTO;
 import com.example.gym.entity.SysUser;
 import java.math.BigDecimal;
 import java.util.Map;
 
 public interface UserService extends IService<SysUser> {
     Map<String, Object> login(SysUser user);
-    void register(SysUser user);
+    void register(UserDTO.RegisterReq req);
 
     /**
      * 充值余额
@@ -23,7 +24,7 @@ public interface UserService extends IService<SysUser> {
      */
     void buyVip(Long userId, Integer vipType);
 
-    void updateProfile(Long userId, String username);
+    void updateProfile(Long userId, UserDTO.UpdateProfileReq req);
 
     void changePassword(Long userId, String oldPassword, String newPassword);
 }

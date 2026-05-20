@@ -62,6 +62,7 @@ public class BookingServiceImpl extends ServiceImpl<BookingMapper, CourseBooking
      * 2. 校验：库存、重复预约、时间冲突
      */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public Long bookCourse(Long userId, Long courseId) {
         Assert.notNull(userId, "用户ID不能为空");
         Assert.notNull(courseId, "课程ID不能为空");
@@ -70,7 +71,7 @@ public class BookingServiceImpl extends ServiceImpl<BookingMapper, CourseBooking
         RLock lock = redissonClient.getLock(lockKey);
 
         try {
-            boolean isLocked = lock.tryLock(3, 10, TimeUnit.SECONDS);
+            boolean isLocked = lock.tryLock(1, 10, TimeUnit.SECONDS);
             if (!isLocked) {
                 throw new BusinessException(ErrorCode.BIZ_LOCK_TIMEOUT);
             }

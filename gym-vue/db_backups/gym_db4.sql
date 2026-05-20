@@ -99,6 +99,9 @@ CREATE TABLE `sys_user`  (
   `balance` decimal(10, 2) NULL DEFAULT 0.00 COMMENT '账户余额',
   `vip_type` int(11) NULL DEFAULT 0 COMMENT '会员类型: 0-普通, 1-月卡, 2-年卡',
   `vip_expire_time` datetime NULL DEFAULT NULL COMMENT 'VIP到期时间',
+  `phone` varchar(20) DEFAULT NULL COMMENT '电话号码',
+  `gender` tinyint(1) DEFAULT NULL COMMENT '性别: 0-未知, 1-男, 2-女',
+  `email` varchar(100) DEFAULT NULL COMMENT '邮箱',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `uk_username`(`username` ASC) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 7 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '用户表' ROW_FORMAT = DYNAMIC;
@@ -106,11 +109,17 @@ CREATE TABLE `sys_user`  (
 -- ----------------------------
 -- Records of sys_user
 -- ----------------------------
-INSERT INTO `sys_user` VALUES (1, 'admin', '123456', '系统管理员', 'admin', '2026-02-04 16:37:03', 900.00, 0, NULL);
-INSERT INTO `sys_user` VALUES (2, 'laixu', '123456', '健身达人', 'user', '2026-02-07 10:24:30', 0.00, 0, NULL);
-INSERT INTO `sys_user` VALUES (3, 'cd', '123456', NULL, 'user', '2026-02-08 21:31:12', 170.00, 1, '2026-03-15 10:58:40');
-INSERT INTO `sys_user` VALUES (4, '陈东', '123456', NULL, 'user', '2026-02-08 21:38:30', 10010.00, 2, NULL);
-INSERT INTO `sys_user` VALUES (5, 'test001', '123456', NULL, 'admin', '2026-02-10 14:44:30', 800.00, 2, NULL);
-INSERT INTO `sys_user` VALUES (6, 'poor_guy', '123456', NULL, 'user', '2026-02-10 14:51:33', 0.00, 0, NULL);
+INSERT INTO `sys_user` VALUES (1, 'admin', '123456', '系统管理员', 'admin', '2026-02-04 16:37:03', 900.00, 0, NULL, NULL, NULL, NULL);
+INSERT INTO `sys_user` VALUES (2, 'laixu', '123456', '健身达人', 'user', '2026-02-07 10:24:30', 0.00, 0, NULL, NULL, NULL, NULL);
+INSERT INTO `sys_user` VALUES (3, 'cd', '123456', NULL, 'user', '2026-02-08 21:31:12', 170.00, 1, '2026-03-15 10:58:40', NULL, NULL, NULL);
+INSERT INTO `sys_user` VALUES (4, '陈东', '123456', NULL, 'user', '2026-02-08 21:38:30', 10010.00, 2, NULL, NULL, NULL, NULL);
+INSERT INTO `sys_user` VALUES (5, 'test001', '123456', NULL, 'admin', '2026-02-10 14:44:30', 800.00, 2, NULL, NULL, NULL, NULL);
+INSERT INTO `sys_user` VALUES (6, 'poor_guy', '123456', NULL, 'user', '2026-02-10 14:51:33', 0.00, 0, NULL, NULL, NULL, NULL);
 
 SET FOREIGN_KEY_CHECKS = 1;
+
+-- 用户基本信息扩展（电话/性别/邮箱）
+-- 如果表已存在且缺少这些列，执行以下 ALTER：
+-- ALTER TABLE sys_user ADD COLUMN phone VARCHAR(20) DEFAULT NULL COMMENT '电话号码';
+-- ALTER TABLE sys_user ADD COLUMN gender TINYINT(1) DEFAULT NULL COMMENT '性别: 0-未知, 1-男, 2-女';
+-- ALTER TABLE sys_user ADD COLUMN email VARCHAR(100) DEFAULT NULL COMMENT '邮箱';

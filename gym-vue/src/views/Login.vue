@@ -111,7 +111,30 @@
                   placeholder="请再次输入密码"
                   show-password
                   :prefix-icon="Lock"
-                  @keyup.enter="handleRegister"
+                />
+              </el-form-item>
+
+              <el-form-item prop="phone">
+                <el-input
+                  v-model="registerForm.phone"
+                  placeholder="手机号（选填）"
+                  :prefix-icon="Phone"
+                />
+              </el-form-item>
+
+              <el-form-item prop="gender">
+                <el-radio-group v-model="registerForm.gender">
+                  <el-radio :value="null">保密</el-radio>
+                  <el-radio :value="1">男</el-radio>
+                  <el-radio :value="2">女</el-radio>
+                </el-radio-group>
+              </el-form-item>
+
+              <el-form-item prop="email">
+                <el-input
+                  v-model="registerForm.email"
+                  placeholder="邮箱（选填）"
+                  :prefix-icon="Message"
                 />
               </el-form-item>
 
@@ -152,7 +175,7 @@
 
 <script setup>
 import { ref, reactive } from 'vue'
-import { User, Lock } from '@element-plus/icons-vue'
+import { User, Lock, Phone, Message } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
 import { login, register } from '../api/auth'
@@ -174,6 +197,9 @@ const registerForm = reactive({
   username: '',
   password: '',
   confirmPassword: '',
+  phone: '',
+  gender: null,
+  email: '',
   agree: false
 })
 
@@ -203,6 +229,12 @@ const registerRules = {
   ],
   confirmPassword: [
     { required: true, validator: validateConfirm, trigger: 'blur' }
+  ],
+  phone: [
+    { pattern: /^1[3-9]\d{9}$/, message: '请输入有效的手机号', trigger: 'blur' }
+  ],
+  email: [
+    { type: 'email', message: '请输入有效的邮箱地址', trigger: 'blur' }
   ]
 }
 
@@ -247,7 +279,10 @@ const handleRegister = async () => {
   try {
     await register({
       username: registerForm.username,
-      password: registerForm.password
+      password: registerForm.password,
+      phone: registerForm.phone || undefined,
+      gender: registerForm.gender,
+      email: registerForm.email || undefined
     })
     ElMessage.success('注册成功，请登录')
 
@@ -256,6 +291,9 @@ const handleRegister = async () => {
     registerForm.username = ''
     registerForm.password = ''
     registerForm.confirmPassword = ''
+    registerForm.phone = ''
+    registerForm.gender = null
+    registerForm.email = ''
     registerForm.agree = false
     activeTab.value = 'login'
   } catch (e) {
