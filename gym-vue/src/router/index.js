@@ -32,8 +32,9 @@ const router = createRouter({
   routes
 })
 
-// 🛡️ 路由守卫
+// 🛡️ 路由守卫：校验登录态（token + user 双重检查）
 router.beforeEach((to, from, next) => {
+  const token = localStorage.getItem('token')
   const userStr = localStorage.getItem('user')
   const user = userStr ? JSON.parse(userStr) : null
 
@@ -43,8 +44,10 @@ router.beforeEach((to, from, next) => {
     return
   }
 
-  // 2. 未登录：踢回登录页
-  if (!user) {
+  // 2. 未登录（token 或 user 任一缺失）：踢回登录页并清理残留数据
+  if (!token || !user || !user.id) {
+    localStorage.removeItem('token')
+    localStorage.removeItem('user')
     next('/login')
     return
   }
@@ -52,7 +55,7 @@ router.beforeEach((to, from, next) => {
   // 3. 🔒 权限拦截：普通用户试图访问管理员页面
   if (to.path.startsWith('/admin-') && user.role !== 'admin') {
     ElMessage.error('无权访问：该页面仅限管理员查看')
-    next('/home') // 强制跳转回首页
+    next('/home')
     return
   }
 

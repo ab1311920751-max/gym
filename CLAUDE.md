@@ -104,10 +104,11 @@ config/      → AliPayConfig、CorsConfig
 
 ### 路由与权限
 
-`src/router/index.js` 用 Vue Router 4，所有受保护页面挂在 `Layout` 下作为子路由。`beforeEach` 守卫：
-1. `/login` 白名单；
-2. 无 `localStorage.user` 跳登录；
-3. `/admin-*` 仅 `role === 'admin'` 可访问，否则 `ElMessage.error` + 跳首页。
+`src/router/index.js` 用 Vue Router 4，所有受保护页面挂在 `Layout` 下作为子路由。`beforeEach` 守卫（具体实现见文件，此处只列规则）：
+1. `/login` 白名单，直接放行；
+2. `localStorage.token` 和 `localStorage.user` **双重校验**——任一缺失或 user 无有效 id 即清除残留数据并跳登录；
+3. `/admin-*` 仅 `role === 'admin'` 可访问，否则 `ElMessage.error` + 跳首页；
+4. 后端 `JwtInterceptor` + 前端 Axios 401 拦截器作为第二道防线，token 过期时由后端 401 触发 `redirectToLogin()`。
 
 新增管理员页面时，命名必须以 `admin-` 前缀，否则会绕过权限。新增受保护页面要挂在 `Layout` 子路由里。
 
