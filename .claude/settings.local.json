@@ -2,7 +2,10 @@
   "permissions": {
     "allow": [
       "Bash(echo \"EXIT:$?\")",
-      "Bash(mvn compile *)"
+      "Bash(mvn compile *)",
+      "Bash(git -C e:/Code/gym log --oneline -20)",
+      "Bash(find /Users/rexwt5 -type d -name \"gym-vue\" 2>/dev/null | head -5)",
+      "Read(//Users/**)"
     ]
   }
 }

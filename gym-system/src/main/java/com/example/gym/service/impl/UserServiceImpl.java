@@ -52,6 +52,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, SysUser> implements
         Map<String, Object> payload = new HashMap<>();
         payload.put("uid", dbUser.getId());
         payload.put("role", dbUser.getRole());
+        payload.put("exp", System.currentTimeMillis() / 1000 + 7200);
         String token = JWTUtil.createToken(payload, "my-secret-key".getBytes());
 
         return MapUtil.builder(new HashMap<String, Object>())

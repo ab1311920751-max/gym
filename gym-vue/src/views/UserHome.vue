@@ -3,9 +3,9 @@
     <!-- Hero 轮播 -->
     <el-carousel height="360px" :interval="4000" arrow="always">
       <el-carousel-item v-for="(item, idx) in banners" :key="idx">
-        <div class="carousel-slide" :style="{ background: item.bg }">
+        <div class="carousel-slide" :style="{ backgroundImage: `url(${item.imageUrl})` }">
+          <div class="slide-overlay"></div>
           <div class="slide-content">
-            <span class="slide-emoji">{{ item.emoji }}</span>
             <h2 class="slide-title">{{ item.title }}</h2>
             <p class="slide-sub">{{ item.subtitle }}</p>
           </div>
@@ -31,7 +31,7 @@
     </div>
     <el-row :gutter="16">
       <el-col :xs="24" :sm="12" :md="8" v-for="course in hotCourses" :key="course.id">
-        <el-card shadow="hover" class="course-card">
+        <el-card shadow="hover" class="course-card" @click="goDetail(course)">
           <div class="course-cover">{{ course.emoji }}</div>
           <div class="course-body">
             <div class="course-name">{{ course.name }}</div>
@@ -48,7 +48,7 @@
               type="primary"
               class="booking-btn"
               :disabled="course.stock <= 0"
-              @click="goCourse"
+              @click.stop="goCourse"
             >
               立即预约
             </el-button>
@@ -64,14 +64,11 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ArrowRight, User, Clock } from '@element-plus/icons-vue'
 import { listCourses } from '../api/course'
+import { listBanners } from '../api/banner'
 
 const router = useRouter()
 
-const banners = [
-  { emoji: '🏋️', title: '专业教练团队', subtitle: '持证上岗，一对一私教指导', bg: 'linear-gradient(135deg, #ff8c42 0%, #ff6b1a 100%)' },
-  { emoji: '📅', title: '灵活预约系统', subtitle: '随时随地，想练就练', bg: 'linear-gradient(135deg, #409eff 0%, #337ecc 100%)' },
-  { emoji: '👑', title: 'VIP 专属折扣', subtitle: '月卡 9 折 · 年卡 8 折', bg: 'linear-gradient(135deg, #67c23a 0%, #529b2e 100%)' }
-]
+const banners = ref([])
 
 const features = [
   { icon: '💪', title: '专业器械', desc: '进口高端健身器材' },
@@ -83,8 +80,15 @@ const features = [
 const hotCourses = ref([])
 
 const goCourse = () => router.push('/course')
+const goDetail = (course) => router.push(`/course/${course.id}`)
 
 onMounted(async () => {
+  try {
+    const bRes = await listBanners()
+    banners.value = bRes.data || []
+  } catch (e) {
+    console.error('加载轮播图失败', e)
+  }
   try {
     const res = await listCourses()
     const courses = (res.data || []).filter(c => c.stock > 0).slice(0, 6)
@@ -97,6 +101,7 @@ onMounted(async () => {
     console.error('加载课程失败', e)
   }
 })
+
 
 const formatTime = (str) => {
   if (!str) return ''
@@ -113,21 +118,27 @@ const formatTime = (str) => {
 /* 轮播 */
 .carousel-slide {
   height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
+  background-size: cover;
+  background-position: center;
+  position: relative;
   color: #fff;
 }
 
-.slide-content {
-  animation: fadeInUp 0.6s ease;
+.slide-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(20, 20, 28, 0.55);
 }
 
-.slide-emoji {
-  font-size: 56px;
-  display: block;
-  margin-bottom: 12px;
+.slide-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  animation: fadeInUp 0.6s ease;
 }
 
 .slide-title {
@@ -205,6 +216,7 @@ const formatTime = (str) => {
   border-radius: 10px;
   margin-bottom: 16px;
   overflow: hidden;
+  cursor: pointer;
 }
 
 .course-card :deep(.el-card__body) {

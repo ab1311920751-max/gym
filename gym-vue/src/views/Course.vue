@@ -36,6 +36,7 @@
         shadow="hover"
         class="course-card"
         :class="{ 'is-disabled': row.stock <= 0 || isCourseExpired(row.startTime) }"
+        @click="goDetail(row)"
       >
         <div class="card-top">
           <div class="course-icon">
@@ -87,7 +88,7 @@
             type="primary"
             :loading="row.loading"
             :disabled="row.stock <= 0 || isCourseExpired(row.startTime)"
-            @click="handleBook(row)"
+            @click.stop="handleBook(row)"
           >
             {{ getBtnText(row) }}
           </el-button>
@@ -114,6 +115,7 @@ import { createBooking } from '../api/booking'
 import { LOW_STOCK_THRESHOLD } from '../constants/booking'
 
 const router = useRouter()
+const goDetail = (row) => router.push(`/course/${row.id}`)
 const loading = ref(true)
 const list = ref([])
 const keyword = ref('')
@@ -241,6 +243,7 @@ onMounted(() => loadCourses())
   border: 1px solid #f0f0f0;
   border-radius: 12px;
   transition: all 0.25s;
+  cursor: pointer;
 }
 
 .course-card:hover {

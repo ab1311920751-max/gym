@@ -2,6 +2,15 @@ import { createRouter, createWebHistory } from 'vue-router'
 import Layout from '../views/Layout.vue'
 import { ElMessage } from 'element-plus'
 
+function isTokenExpired(token) {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]))
+    return !payload.exp || payload.exp * 1000 < Date.now()
+  } catch {
+    return true
+  }
+}
+
 const routes = [
   {
     path: '/',
@@ -10,6 +19,7 @@ const routes = [
     children: [
       { path: 'home', name: 'Home', component: () => import('../views/Home.vue') },
       { path: 'course', name: 'Course', component: () => import('../views/Course.vue') },
+      { path: 'course/:id', name: 'CourseDetail', component: () => import('../views/CourseDetail.vue') },
       { path: 'my-booking', name: 'MyBooking', component: () => import('../views/MyBooking.vue') },
       { path: 'wallet', name: 'Wallet', component: () => import('../views/Wallet.vue') },
       { path: 'ai-chat', name: 'AiChat', component: () => import('../views/AiChat.vue') },
@@ -48,6 +58,15 @@ router.beforeEach((to, from, next) => {
   if (!token || !user || !user.id) {
     localStorage.removeItem('token')
     localStorage.removeItem('user')
+    next('/login')
+    return
+  }
+
+  // 2.5 token 过期检查
+  if (isTokenExpired(token)) {
+    localStorage.removeItem('token')
+    localStorage.removeItem('user')
+    ElMessage.warning('登录已过期，请重新登录')
     next('/login')
     return
   }
