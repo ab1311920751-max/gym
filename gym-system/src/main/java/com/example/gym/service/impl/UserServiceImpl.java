@@ -47,6 +47,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, SysUser> implements
             throw new BusinessException(ErrorCode.BIZ_USERNAME_OR_PASSWORD_WRONG);
         }
 
+        if (Integer.valueOf(0).equals(dbUser.getStatus())) {
+            throw new BusinessException(ErrorCode.BIZ_USER_DISABLED);
+        }
+
         checkVipStatus(dbUser);
 
         Map<String, Object> payload = new HashMap<>();
@@ -238,6 +242,26 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, SysUser> implements
         this.update(new LambdaUpdateWrapper<SysUser>()
                 .set(SysUser::getPassword, user.getPassword())
                 .eq(SysUser::getId, userId));
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void updateStatus(Long operatorId, Long targetId, Integer status) {
+        Assert.notNull(targetId, "用户ID不能为空");
+        Assert.isTrue(status == 0 || status == 1, "状态参数无效");
+
+        if (operatorId.equals(targetId)) {
+            throw new BusinessException(ErrorCode.BIZ_CANNOT_DISABLE_SELF);
+        }
+
+        SysUser target = this.getById(targetId);
+        if (target == null) {
+            throw new BusinessException(ErrorCode.BIZ_USER_NOT_FOUND);
+        }
+
+        this.update(new LambdaUpdateWrapper<SysUser>()
+                .set(SysUser::getStatus, status)
+                .eq(SysUser::getId, targetId));
     }
 
     /**

@@ -22,6 +22,8 @@ public class GymCourse {
     // --- 修复：对应数据库的 content 字段 ---
     private String content;
 
+    private String category; // 课程分类
+
     // --- 核心修复：数据库是 start_time，Java必须用 startTime ---
     // 之前写的是 String times，导致报错
     private LocalDateTime startTime;

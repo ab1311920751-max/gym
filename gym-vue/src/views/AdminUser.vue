@@ -90,24 +90,38 @@
           </template>
         </el-table-column>
 
+        <el-table-column label="状态" width="90">
+          <template #default="{ row }">
+            <el-tag :type="row.status === 0 ? 'danger' : 'success'" effect="light">
+              {{ row.status === 0 ? '已禁用' : '正常' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+
         <el-table-column label="注册时间" width="180">
           <template #default="{ row }">
             <span class="muted">{{ formatTime(row.createTime) }}</span>
           </template>
         </el-table-column>
 
-        <el-table-column label="操作" min-width="180" fixed="right">
+        <el-table-column label="操作" min-width="200" fixed="right">
           <template #default="{ row }">
             <el-button size="small" type="primary" @click="handleEdit(row)">
               编辑
             </el-button>
             <el-popconfirm
-              width="280"
-              title="将删除该用户的所有数据，不可恢复，确定吗？"
-              @confirm="handleDelete(row.id)"
+              v-if="row.id !== currentUser.id"
+              width="260"
+              :title="row.status === 0 ? '确定要启用该用户吗？' : '确定要禁用该用户吗？'"
+              @confirm="handleToggleStatus(row)"
             >
               <template #reference>
-                <el-button size="small" type="danger">删除</el-button>
+                <el-button
+                  size="small"
+                  :type="row.status === 0 ? 'success' : 'warning'"
+                >
+                  {{ row.status === 0 ? '启用' : '禁用' }}
+                </el-button>
               </template>
             </el-popconfirm>
           </template>
@@ -191,9 +205,11 @@ import { ref, reactive, onMounted } from 'vue'
 import { Search, User, AlarmClock } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import dayjs from 'dayjs'
-import { pageUsers, updateUser, deleteUser } from '../api/user'
+import { pageUsers, updateUser, updateUserStatus } from '../api/user'
 import { ROLE, ROLE_LABEL } from '../constants/role'
 import { VIP_TYPE, VIP_LABEL, VIP_TAG_TYPE } from '../constants/vip'
+
+const currentUser = JSON.parse(localStorage.getItem('user') || '{}')
 
 const loading = ref(false)
 const saving = ref(false)
@@ -262,10 +278,12 @@ const save = async () => {
   }
 }
 
-const handleDelete = async (id) => {
+const handleToggleStatus = async (row) => {
+  const nextStatus = row.status === 0 ? 1 : 0
+  const label = nextStatus === 0 ? '禁用' : '启用'
   try {
-    await deleteUser(id)
-    ElMessage.success('删除成功')
+    await updateUserStatus(row.id, nextStatus)
+    ElMessage.success(`${label}成功`)
     load()
   } catch (e) {
     console.error(e)

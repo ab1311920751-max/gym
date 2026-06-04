@@ -21,6 +21,20 @@
           @keyup.enter="handleSearch"
           @clear="handleSearch"
         />
+        <el-select
+          v-model="query.category"
+          placeholder="全部分类"
+          clearable
+          style="width: 130px"
+          @change="handleSearch"
+        >
+          <el-option
+            v-for="cat in COURSE_CATEGORIES.slice(1)"
+            :key="cat.value"
+            :label="cat.label"
+            :value="cat.value"
+          />
+        </el-select>
         <el-button type="primary" @click="handleSearch">查询</el-button>
         <div class="toolbar-spacer"></div>
         <el-button type="primary" :icon="Plus" @click="handleAdd">新增课程</el-button>
@@ -36,6 +50,12 @@
         <el-table-column prop="id" label="ID" width="80" />
         <el-table-column prop="name" label="课程名称" min-width="140" />
         <el-table-column prop="coach" label="教练" width="120" />
+        <el-table-column label="分类" width="120">
+          <template #default="{ row }">
+            <el-tag v-if="row.category" size="small" type="warning" effect="plain">{{ row.category }}</el-tag>
+            <span v-else class="muted">未分类</span>
+          </template>
+        </el-table-column>
         <el-table-column label="开课时间" width="170">
           <template #default="{ row }">
             {{ formatTime(row.startTime) }}
@@ -101,6 +121,16 @@
         <el-form-item label="教练姓名" prop="coach">
           <el-input v-model="form.coach" placeholder="如：张教练" />
         </el-form-item>
+        <el-form-item label="课程分类">
+          <el-select v-model="form.category" placeholder="选择分类" clearable style="width: 100%">
+            <el-option
+              v-for="cat in COURSE_CATEGORIES.slice(1)"
+              :key="cat.value"
+              :label="cat.label"
+              :value="cat.value"
+            />
+          </el-select>
+        </el-form-item>
         <el-form-item label="课程简介" prop="content">
           <el-input
             v-model="form.content"
@@ -153,6 +183,7 @@ import {
   updateCourse,
   deleteCourse
 } from '../api/course'
+import { COURSE_CATEGORIES } from '../constants/course'
 
 const loading = ref(false)
 const saving = ref(false)
@@ -164,13 +195,15 @@ const formRef = ref(null)
 const query = reactive({
   pageNum: 1,
   pageSize: 8,
-  name: ''
+  name: '',
+  category: ''
 })
 
 const emptyForm = () => ({
   id: null,
   name: '',
   coach: '',
+  category: '',
   content: '',
   startTime: '',
   price: 0,
@@ -195,7 +228,8 @@ const load = async () => {
     const res = await pageCourses({
       pageNum: query.pageNum,
       pageSize: query.pageSize,
-      name: query.name || undefined
+      name: query.name || undefined,
+      category: query.category || undefined
     })
     tableData.value = res.data?.records || []
     total.value = res.data?.total || 0
@@ -322,6 +356,11 @@ onMounted(() => load())
   color: #909399;
   font-size: 13px;
   margin-left: 2px;
+}
+
+.muted {
+  color: #c0c4cc;
+  font-size: 13px;
 }
 
 .pagination-wrapper {

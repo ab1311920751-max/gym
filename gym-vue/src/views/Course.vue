@@ -1,5 +1,6 @@
 <template>
   <div class="course-page">
+    <!-- 顶部：标题 + 关键词搜索 -->
     <div class="page-header">
       <div>
         <h2 class="page-title">
@@ -17,18 +18,58 @@
       />
     </div>
 
+    <!-- 分类 Tab -->
+    <div class="category-bar">
+      <el-tabs v-model="activeCategory" @tab-change="resetPage">
+        <el-tab-pane
+          v-for="cat in COURSE_CATEGORIES"
+          :key="cat.value"
+          :label="cat.label"
+          :name="cat.value"
+        />
+      </el-tabs>
+    </div>
+
+    <!-- 状态筛选 + 排序 -->
+    <div class="filter-bar">
+      <div class="filter-left">
+        <span class="filter-label">状态：</span>
+        <el-radio-group v-model="statusFilter" size="small" @change="resetPage">
+          <el-radio-button
+            v-for="opt in STATUS_OPTIONS"
+            :key="opt.value"
+            :label="opt.value"
+          >{{ opt.label }}</el-radio-button>
+        </el-radio-group>
+      </div>
+      <div class="filter-right">
+        <span class="filter-label">排序：</span>
+        <el-select v-model="sortBy" size="small" style="width: 120px" @change="resetPage">
+          <el-option
+            v-for="opt in SORT_OPTIONS"
+            :key="opt.value"
+            :label="opt.label"
+            :value="opt.value"
+          />
+        </el-select>
+      </div>
+    </div>
+
+    <!-- 加载骨架 -->
     <div v-if="loading" class="grid">
       <el-card v-for="i in 8" :key="i" shadow="never" class="skeleton-card">
         <el-skeleton :rows="4" animated />
       </el-card>
     </div>
 
+    <!-- 空状态 -->
     <el-empty
       v-else-if="filteredList.length === 0"
-      description="暂无可预约课程"
+      description="暂无符合条件的课程"
       class="empty-block"
     />
 
+    <!-- 课程网格 -->
     <div v-else class="grid">
       <el-card
         v-for="row in pagedList"
@@ -42,14 +83,16 @@
           <div class="course-icon">
             <el-icon :size="22"><Basketball /></el-icon>
           </div>
-          <div class="course-status">
+          <div class="card-top-right">
+            <el-tag v-if="row.category" size="small" type="warning" effect="plain" class="category-tag">
+              {{ row.category }}
+            </el-tag>
             <el-tag v-if="row.stock <= 0" type="info" size="small">已售罄</el-tag>
             <el-tag
               v-else-if="isCourseExpired(row.startTime)"
               type="info"
               size="small"
-              >已结束</el-tag
-            >
+            >已结束</el-tag>
             <el-tag v-else-if="row.stock < LOW_STOCK_THRESHOLD" type="danger" size="small">
               仅剩 {{ row.stock }} 位
             </el-tag>
@@ -124,23 +167,60 @@ import dayjs from 'dayjs'
 import { listCourses } from '../api/course'
 import { createBooking } from '../api/booking'
 import { LOW_STOCK_THRESHOLD } from '../constants/booking'
+import { COURSE_CATEGORIES, STATUS_OPTIONS, SORT_OPTIONS } from '../constants/course'
 
 const router = useRouter()
 const goDetail = (row) => router.push(`/course/${row.id}`)
 const loading = ref(true)
 const list = ref([])
 const keyword = ref('')
+const activeCategory = ref('')
+const statusFilter = ref('')
+const sortBy = ref('time')
 const currentPage = ref(1)
 const PAGE_SIZE = 8
 
+const resetPage = () => { currentPage.value = 1 }
+
 const filteredList = computed(() => {
-  if (!keyword.value.trim()) return list.value
-  const kw = keyword.value.trim().toLowerCase()
-  return list.value.filter(
-    (row) =>
-      (row.name || '').toLowerCase().includes(kw) ||
-      (row.coach || '').toLowerCase().includes(kw)
-  )
+  let result = list.value
+
+  // 关键词
+  if (keyword.value.trim()) {
+    const kw = keyword.value.trim().toLowerCase()
+    result = result.filter(
+      (r) =>
+        (r.name || '').toLowerCase().includes(kw) ||
+        (r.coach || '').toLowerCase().includes(kw)
+    )
+  }
+
+  // 分类
+  if (activeCategory.value) {
+    result = result.filter((r) => r.category === activeCategory.value)
+  }
+
+  // 状态
+  if (statusFilter.value === 'available') {
+    result = result.filter((r) => r.stock > 0 && !isCourseExpired(r.startTime))
+  } else if (statusFilter.value === 'soldOut') {
+    result = result.filter((r) => r.stock <= 0)
+  } else if (statusFilter.value === 'expired') {
+    result = result.filter((r) => isCourseExpired(r.startTime))
+  }
+
+  // 排序
+  if (sortBy.value === 'price') {
+    result = [...result].sort((a, b) => (a.price || 0) - (b.price || 0))
+  } else {
+    result = [...result].sort((a, b) => {
+      if (!a.startTime) return 1
+      if (!b.startTime) return -1
+      return dayjs(a.startTime).unix() - dayjs(b.startTime).unix()
+    })
+  }
+
+  return result
 })
 
 const pagedList = computed(() => {
@@ -148,7 +228,7 @@ const pagedList = computed(() => {
   return filteredList.value.slice(start, start + PAGE_SIZE)
 })
 
-watch(keyword, () => { currentPage.value = 1 })
+watch([keyword, activeCategory, statusFilter, sortBy], resetPage)
 
 const loadCourses = async () => {
   loading.value = true
@@ -228,7 +308,7 @@ onMounted(() => loadCourses())
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 20px;
+  margin-bottom: 12px;
   gap: 16px;
   flex-wrap: wrap;
 }
@@ -253,6 +333,51 @@ onMounted(() => loadCourses())
   width: 280px;
 }
 
+/* 分类 Tab */
+.category-bar {
+  margin-bottom: 0;
+  border-bottom: none;
+}
+
+.category-bar :deep(.el-tabs__header) {
+  margin-bottom: 0;
+}
+
+.category-bar :deep(.el-tabs__nav-wrap::after) {
+  display: none;
+}
+
+.category-bar :deep(.el-tabs__item) {
+  font-size: 14px;
+  padding: 0 18px;
+}
+
+/* 状态 + 排序栏 */
+.filter-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 10px 0 16px;
+  border-bottom: 1px solid #f0f0f0;
+  margin-bottom: 20px;
+}
+
+.filter-left,
+.filter-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filter-label {
+  font-size: 13px;
+  color: #606266;
+  white-space: nowrap;
+}
+
+/* 课程网格 */
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -283,8 +408,19 @@ onMounted(() => loadCourses())
 .card-top {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   margin-bottom: 14px;
+}
+
+.card-top-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.category-tag {
+  font-size: 11px;
 }
 
 .course-icon {
@@ -296,6 +432,7 @@ onMounted(() => loadCourses())
   align-items: center;
   justify-content: center;
   color: #ff7a2f;
+  flex-shrink: 0;
 }
 
 .course-name {

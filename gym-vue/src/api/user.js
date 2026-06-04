@@ -17,3 +17,6 @@ export const deleteUser = (id) => request.delete(`/user/${id}`)
 export const updateProfile = (data) => request.put('/user/profile', data)
 
 export const changePassword = (data) => request.put('/user/password', data)
+
+export const updateUserStatus = (id, status) =>
+  request.put(`/user/${id}/status`, null, { params: { status } })

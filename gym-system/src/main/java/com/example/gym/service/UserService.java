@@ -27,4 +27,6 @@ public interface UserService extends IService<SysUser> {
     void updateProfile(Long userId, UserDTO.UpdateProfileReq req);
 
     void changePassword(Long userId, String oldPassword, String newPassword);
+
+    void updateStatus(Long operatorId, Long targetId, Integer status);
 }

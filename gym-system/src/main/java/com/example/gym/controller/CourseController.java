@@ -16,11 +16,12 @@ public class CourseController {
 
     private final CourseService courseService;
 
-    // --- 🔥 核心修复：必须显式定义 /list 接口 ---
-    // 否则前端查所有课程时，会报错 "Failed to convert value of type String to Long"
     @GetMapping("/list")
-    public Result list() {
-        return Result.success(courseService.list());
+    public Result list(@RequestParam(required = false) String category) {
+        LambdaQueryWrapper<GymCourse> query = new LambdaQueryWrapper<>();
+        query.eq(StrUtil.isNotBlank(category), GymCourse::getCategory, category);
+        query.orderByAsc(GymCourse::getStartTime);
+        return Result.success(courseService.list(query));
     }
 
     // 新增
@@ -54,9 +55,11 @@ public class CourseController {
     @GetMapping("/page")
     public Result findPage(@RequestParam(defaultValue = "1") Integer pageNum,
                            @RequestParam(defaultValue = "10") Integer pageSize,
-                           @RequestParam(required = false) String name) {
+                           @RequestParam(required = false) String name,
+                           @RequestParam(required = false) String category) {
         LambdaQueryWrapper<GymCourse> query = new LambdaQueryWrapper<>();
         query.like(StrUtil.isNotBlank(name), GymCourse::getName, name);
+        query.eq(StrUtil.isNotBlank(category), GymCourse::getCategory, category);
         query.orderByAsc(GymCourse::getId);
         return Result.success(courseService.page(new Page<>(pageNum, pageSize), query));
     }

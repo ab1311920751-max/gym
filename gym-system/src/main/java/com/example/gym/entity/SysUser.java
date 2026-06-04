@@ -34,4 +34,7 @@ public class SysUser {
     private Integer gender;
 
     private String email;
+
+    // 0=禁用，1=正常
+    private Integer status;
 }

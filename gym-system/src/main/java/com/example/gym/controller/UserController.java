@@ -77,6 +77,14 @@ public class UserController {
         return Result.success();
     }
 
+    @PutMapping("/{id}/status")
+    public Result updateStatus(@CurrentUserId Long operatorId,
+                               @PathVariable Long id,
+                               @RequestParam Integer status) {
+        userService.updateStatus(operatorId, id, status);
+        return Result.success();
+    }
+
     @GetMapping("/page")
     public Result findPage(@RequestParam(defaultValue = "1") Integer pageNum,
                            @RequestParam(defaultValue = "10") Integer pageSize,
