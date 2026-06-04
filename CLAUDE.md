@@ -33,17 +33,19 @@ npm run preview  # 预览生产构建
 ### 数据库初始化
 
 ```bash
-mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS gym_db DEFAULT CHARACTER SET utf8mb4;"
-mysql -u root -p gym_db < gym-vue/db_backups/gym_db4.sql
+mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS gym_db1 DEFAULT CHARACTER SET utf8mb4;"
+mysql -u root -p gym_db1 < gym-vue/db_backups/gym_db4.sql
 ```
 
 > README 中提到的 `migrate_v2.sql` 在当前仓库中并不存在；`gym_db4.sql` 已经是合并版的最新结构。如果用户提到迁移脚本缺失，按此说明即可，不要凭空创建。
 > 
 > 根 README 引用了 `gym-system/README.md`，但该文件**实际不存在**。
+>
+> AI 客服所需的 `ai_chat_session` 和 `ai_chat_message` 两张表已在 `gym_db1` 中存在，无需重新建表。迁移脚本位于 `gym-vue/db_backups/migrate_ai.sql`（仅供参考）。
 
 ### 运行依赖
 
-- MySQL 8.0（`application.yml` 默认 `localhost:3306/gym_db`，用户 `root`/`123456`）
+- MySQL 8.0（`application.yml` 默认 `localhost:3306/gym_db1`，用户 `root`/`123456`）
 - Redis 6.0+（Redisson 默认连 `localhost:6379`，**抢课接口若 Redis 未启动会直接失败**）
 - JDK 17、Node 18+
 
@@ -128,7 +130,7 @@ config/      → AliPayConfig、CorsConfig
 
 1. **Coze SDK 浮窗**（`index.html`）：第三方 AI 聊天机器人，通过 CDN 加载 Coze Web SDK，bot_id 和 PAT token 硬编码在 `<script>` 标签中。浮窗按钮出现在所有页面（包括登录页），是一个完全独立的外部 AI 通道。
 
-2. **AiChat.vue 组件**（`src/components/AiChat.vue`）：自建 AI 对话组件，在 `Layout.vue` 中渲染（仅 Layout 包裹的页面可见）。固定定位的紫色浮动球，展开为 360×520px 聊天窗口，调用后端 `POST /ai/chat` 接口。后端 `AiServiceImpl` 是**本地规则匹配**（Demo Mode），通过关键词匹配（推荐/余额/VIP）返回预设回复，非真实 LLM 调用。预留了 `callDeepSeekApi` 扩展点。
+2. **AiChat.vue**（`src/views/AiChat.vue`）：自建 AI 对话页面，路由挂在 Layout 子路由下。左侧会话列表 + 右侧流式聊天区，调用后端 `POST /ai/chat/stream` SSE 接口。后端 `AiServiceImpl` 对接 DeepSeek API（`deepseek-chat` 模型），支持多轮上下文（历史存 `ai_chat_session` / `ai_chat_message` 表），每次请求携带最近 20 条对话历史。`application.yml` 的 `deepseek.enabled` 为总开关，关闭时抛错提示"AI 功能未开启"。
 
 ### 状态管理
 

@@ -119,7 +119,7 @@
           v-model:current-page="query.pageNum"
           v-model:page-size="query.pageSize"
           :total="total"
-          :page-sizes="[10, 20, 50]"
+          :page-sizes="[8, 20, 50]"
           background
           layout="total, sizes, prev, pager, next, jumper"
           @current-change="load"
@@ -205,7 +205,7 @@ const form = ref({})
 
 const query = reactive({
   pageNum: 1,
-  pageSize: 10,
+  pageSize: 8,
   username: ''
 })
 

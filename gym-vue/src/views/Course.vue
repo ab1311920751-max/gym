@@ -31,7 +31,7 @@
 
     <div v-else class="grid">
       <el-card
-        v-for="row in filteredList"
+        v-for="row in pagedList"
         :key="row.id"
         shadow="hover"
         class="course-card"
@@ -95,11 +95,22 @@
         </div>
       </el-card>
     </div>
+
+    <div v-if="filteredList.length > PAGE_SIZE" class="pagination-bar">
+      <el-pagination
+        :current-page="currentPage"
+        :page-size="PAGE_SIZE"
+        :total="filteredList.length"
+        layout="prev, pager, next, total"
+        background
+        @current-change="(val) => (currentPage = val)"
+      />
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import {
   Calendar,
   Clock,
@@ -119,6 +130,8 @@ const goDetail = (row) => router.push(`/course/${row.id}`)
 const loading = ref(true)
 const list = ref([])
 const keyword = ref('')
+const currentPage = ref(1)
+const PAGE_SIZE = 8
 
 const filteredList = computed(() => {
   if (!keyword.value.trim()) return list.value
@@ -129,6 +142,13 @@ const filteredList = computed(() => {
       (row.coach || '').toLowerCase().includes(kw)
   )
 })
+
+const pagedList = computed(() => {
+  const start = (currentPage.value - 1) * PAGE_SIZE
+  return filteredList.value.slice(start, start + PAGE_SIZE)
+})
+
+watch(keyword, () => { currentPage.value = 1 })
 
 const loadCourses = async () => {
   loading.value = true
@@ -353,5 +373,11 @@ onMounted(() => loadCourses())
 
 .empty-block {
   margin: 60px auto;
+}
+
+.pagination-bar {
+  display: flex;
+  justify-content: center;
+  margin-top: 28px;
 }
 </style>

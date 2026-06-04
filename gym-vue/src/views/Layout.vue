@@ -42,6 +42,11 @@
             <span>我的钱包</span>
           </el-menu-item>
 
+          <el-menu-item index="/profile">
+            <el-icon><UserFilled /></el-icon>
+            <span>个人信息</span>
+          </el-menu-item>
+
           <el-menu-item index="/ai-chat">
             <el-icon><Service /></el-icon>
             <span>AI 客服</span>
@@ -132,6 +137,7 @@ import {
   Setting,
   ArrowDown,
   User,
+  UserFilled,
   Lock,
   SwitchButton,
   Tickets
@@ -162,7 +168,7 @@ const handleCommand = (command) => {
   if (command === 'logout') {
     logout()
   } else if (command === 'profile') {
-    router.push('/wallet')
+    router.push('/profile')
   }
 }
 

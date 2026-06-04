@@ -5,7 +5,10 @@
       "Bash(mvn compile *)",
       "Bash(git -C e:/Code/gym log --oneline -20)",
       "Bash(find /Users/rexwt5 -type d -name \"gym-vue\" 2>/dev/null | head -5)",
-      "Read(//Users/**)"
+      "Read(//Users/**)",
+      "Bash(mysql -u root -p123456 gym_db1 -e \"SELECT id, username, role, vip_type FROM sys_user ORDER BY id;\")",
+      "Bash(mysql -u root -p123456 gym_db1 -e \"SELECT COUNT\\(*\\) AS remaining_bookings FROM course_booking;\")",
+      "Bash(mysql -u root -p123456 gym_db1 -e \"SELECT id, name, coach, DATE_FORMAT\\(start_time, '%m/%d %H:%i'\\) AS time, price, capacity, stock FROM gym_course ORDER BY id;\")"
     ]
   }
 }

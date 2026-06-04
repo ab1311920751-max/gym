@@ -8,6 +8,7 @@ import com.example.gym.vo.AiChatMessageVO;
 import com.example.gym.vo.AiChatSessionVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
 
@@ -22,6 +23,13 @@ public class AiController {
     public Result<AiChatMessageVO> chat(@CurrentUserId Long uid, @RequestBody AiChatReq req) {
         AiChatMessageVO reply = aiService.chat(uid, req.getSessionId(), req.getMessage());
         return Result.success(reply);
+    }
+
+    @PostMapping("/chat/stream")
+    public SseEmitter chatStream(@CurrentUserId Long uid, @RequestBody AiChatReq req) {
+        SseEmitter emitter = new SseEmitter(60_000L);
+        aiService.chatStream(uid, req.getSessionId(), req.getMessage(), emitter);
+        return emitter;
     }
 
     @GetMapping("/sessions")

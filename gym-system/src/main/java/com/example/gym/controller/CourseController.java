@@ -57,7 +57,7 @@ public class CourseController {
                            @RequestParam(required = false) String name) {
         LambdaQueryWrapper<GymCourse> query = new LambdaQueryWrapper<>();
         query.like(StrUtil.isNotBlank(name), GymCourse::getName, name);
-        query.orderByDesc(GymCourse::getId);
+        query.orderByAsc(GymCourse::getId);
         return Result.success(courseService.page(new Page<>(pageNum, pageSize), query));
     }
 }

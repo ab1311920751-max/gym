@@ -20,6 +20,7 @@ public class BookingVO {
     private String coach;
     private LocalDateTime startTime;
     private BigDecimal price;
+    private BigDecimal realPrice;
 
     /** 给前端展示的已格式化时间。Service 层填充。 */
     private String startTimeDisplay;

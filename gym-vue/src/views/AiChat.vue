@@ -3,7 +3,7 @@
     <!-- 左侧会话列表 -->
     <div class="session-sidebar">
       <div class="sidebar-header">
-        <el-button type="primary" :icon="Plus" @click="newChat" class="new-chat-btn">
+        <el-button type="primary" :icon="Plus" @click="newChat" :disabled="streaming" class="new-chat-btn">
           新建对话
         </el-button>
       </div>
@@ -42,8 +42,8 @@
       <!-- 空状态 -->
       <div v-if="!selectedSession" class="welcome-area">
         <div class="welcome-icon">🏋️</div>
-        <h2>你好，我是你的 AI 健身助手</h2>
-        <p class="welcome-desc">我可以帮你查询课程、推荐训练、解答疑问</p>
+        <h2>你好，我是小健 · AI 健身助手</h2>
+        <p class="welcome-desc">我可以帮你推荐课程、规划训练、解答任何健身疑问</p>
         <div class="quick-questions">
           <p class="quick-title">试试问我：</p>
           <div class="quick-tags">
@@ -76,18 +76,15 @@
                 <div class="ai-avatar">AI</div>
               </div>
               <div class="msg-bubble" :class="m.role">
-                <div class="msg-text">{{ m.content }}</div>
+                <!-- 流式中且内容为空：显示跳点动画 -->
+                <div v-if="m.streaming && !m.content" class="typing-bubble-inner">
+                  <span class="typing-dots"><span>.</span><span>.</span><span>.</span></span>
+                </div>
+                <!-- 有内容：显示文字，流式中末尾加光标 -->
+                <div v-else class="msg-text" :class="{ streaming: m.streaming }">{{ m.content }}</div>
               </div>
               <div v-if="m.role === 'user'" class="msg-avatar">
                 <div class="user-avatar-sm">{{ user.username ? user.username.charAt(0).toUpperCase() : 'U' }}</div>
-              </div>
-            </div>
-            <div v-if="sending" class="message-row msg-assistant">
-              <div class="msg-avatar">
-                <div class="ai-avatar">AI</div>
-              </div>
-              <div class="msg-bubble assistant typing-bubble">
-                <span class="typing-dots"><span>.</span><span>.</span><span>.</span></span>
               </div>
             </div>
           </div>
@@ -100,7 +97,7 @@
             :rows="1"
             placeholder="输入你的问题，按 Enter 发送，Shift+Enter 换行"
             @keydown.enter.exact.prevent="send(inputText)"
-            :disabled="sending"
+            :disabled="streaming"
             resize="none"
             class="msg-input"
           />
@@ -108,8 +105,8 @@
             type="primary"
             :icon="Promotion"
             @click="send(inputText)"
-            :disabled="!inputText.trim() || sending"
-            :loading="sending"
+            :disabled="!inputText.trim() || streaming"
+            :loading="streaming"
             class="send-btn"
           >
             发送
@@ -121,10 +118,10 @@
 </template>
 
 <script setup>
-import { ref, onMounted, nextTick, computed } from 'vue'
+import { ref, onMounted, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Plus, Delete, Promotion } from '@element-plus/icons-vue'
-import { sendMessage, getSessions, getMessages, deleteSession } from '../api/ai'
+import { getSessions, getMessages, deleteSession, sendMessageStream } from '../api/ai'
 
 const user = JSON.parse(localStorage.getItem('user') || '{}')
 
@@ -133,15 +130,15 @@ const sessionLoading = ref(false)
 const selectedSession = ref(null)
 const messages = ref([])
 const msgLoading = ref(false)
-const sending = ref(false)
+const streaming = ref(false)
 const inputText = ref('')
 const messageContainer = ref(null)
 
 const quickQuestions = [
-  '最近有什么课推荐？',
-  '明天有什么课？',
-  '还剩多少名额？',
-  '我的余额是多少？'
+  '有什么课程推荐？',
+  '明天有哪些课？',
+  '我的余额够上什么课？',
+  'VIP 有什么优惠？'
 ]
 
 onMounted(async () => {
@@ -153,7 +150,7 @@ async function loadSessions() {
   try {
     const res = await getSessions()
     sessions.value = res.data || []
-  } catch (e) {
+  } catch {
     ElMessage.error('加载会话列表失败')
   } finally {
     sessionLoading.value = false
@@ -166,6 +163,7 @@ function newChat() {
 }
 
 async function selectSession(session) {
+  if (streaming.value) return
   selectedSession.value = session
   msgLoading.value = true
   try {
@@ -173,7 +171,7 @@ async function selectSession(session) {
     messages.value = res.data || []
     await nextTick()
     scrollToBottom()
-  } catch (e) {
+  } catch {
     ElMessage.error('加载消息失败')
   } finally {
     msgLoading.value = false
@@ -182,52 +180,76 @@ async function selectSession(session) {
 
 async function send(text) {
   const msg = text.trim()
-  if (!msg) return
+  if (!msg || streaming.value) return
   inputText.value = ''
-  sending.value = true
 
-  const tempId = Date.now()
+  const isNewSession = !selectedSession.value
+  streaming.value = true
+
+  // 新对话时设置临时会话占位，触发聊天区域渲染
+  if (isNewSession) {
+    selectedSession.value = { id: null, title: msg.substring(0, 20), lastMessage: '' }
+    messages.value = []
+  }
+
+  // 推入用户消息气泡
   messages.value.push({
-    id: tempId,
-    sessionId: selectedSession.value ? selectedSession.value.id : null,
+    id: 'u-' + Date.now(),
     role: 'user',
     content: msg,
     createTime: new Date().toISOString()
   })
+
+  // 推入 AI 流式气泡（内容为空，streaming: true）
+  const aiMsgIdx = messages.value.length
+  messages.value.push({
+    id: 'a-' + Date.now(),
+    role: 'assistant',
+    content: '',
+    streaming: true
+  })
+
   await nextTick()
   scrollToBottom()
 
-  try {
-    const res = await sendMessage({
-      sessionId: selectedSession.value ? selectedSession.value.id : null,
-      message: msg
-    })
-    // remove temp user message if it was a new session
-    const reply = res.data
-    if (!selectedSession.value) {
-      // new session created - reload sessions and set as selected
-      const sessionMsg = messages.value.find(m => m.id === tempId)
-      if (sessionMsg) {
-        sessionMsg.sessionId = reply.sessionId
+  sendMessageStream(
+    { sessionId: selectedSession.value?.id ?? null, message: msg },
+    // onSession：收到 sessionId 元数据
+    async (sessionId) => {
+      try {
+        selectedSession.value = { id: sessionId, title: msg.substring(0, 20), lastMessage: '' }
+        await loadSessions()
+        const real = sessions.value.find(s => s.id === sessionId)
+        if (real) selectedSession.value = real
+      } catch {
+        // 会话列表刷新失败不影响对话
       }
-      await loadSessions()
-      const newSession = sessions.value.find(s => s.id === reply.sessionId)
-      if (newSession) {
-        selectedSession.value = newSession
+    },
+    // onChunk：逐字追加（guard: 用户可能已切换会话）
+    (chunk) => {
+      if (messages.value[aiMsgIdx]) {
+        messages.value[aiMsgIdx].content += chunk
+        nextTick(() => scrollToBottom())
       }
+    },
+    // onDone：流结束
+    () => {
+      messages.value[aiMsgIdx].streaming = false
+      streaming.value = false
+      if (!isNewSession) loadSessions()
+    },
+    // onError：异常
+    () => {
+      if (!messages.value[aiMsgIdx].content) {
+        messages.value[aiMsgIdx].content = 'AI 服务暂时不可用，请稍后重试'
+      }
+      messages.value[aiMsgIdx].streaming = false
+      streaming.value = false
     }
-    messages.value.push(reply)
-    await nextTick()
-    scrollToBottom()
-  } catch (e) {
-    ElMessage.error('发送失败，请重试')
-  } finally {
-    sending.value = false
-  }
+  )
 }
 
 function sendQuick(q) {
-  inputText.value = q
   send(q)
 }
 
@@ -241,7 +263,7 @@ async function handleDelete(sessionId, event) {
       messages.value = []
     }
     ElMessage.success('已删除')
-  } catch (e) {
+  } catch {
     ElMessage.error('删除失败')
   }
 }
@@ -343,7 +365,6 @@ function scrollToBottom() {
   min-width: 0;
 }
 
-/* 空状态 */
 .welcome-area {
   flex: 1;
   display: flex;
@@ -383,7 +404,6 @@ function scrollToBottom() {
   padding-top: 60px;
   font-size: 14px;
 }
-
 .msg-loading-area {
   min-height: 100%;
 }
@@ -393,13 +413,8 @@ function scrollToBottom() {
   align-items: flex-start;
   margin-bottom: 20px;
 }
-
-.msg-user {
-  justify-content: flex-end;
-}
-.msg-assistant {
-  justify-content: flex-start;
-}
+.msg-user { justify-content: flex-end; }
+.msg-assistant { justify-content: flex-start; }
 
 .msg-avatar {
   flex-shrink: 0;
@@ -455,9 +470,23 @@ function scrollToBottom() {
   white-space: pre-wrap;
 }
 
-/* 打字动画 */
-.typing-bubble {
-  padding: 14px 20px;
+/* 流式光标：文字后闪烁竖线 */
+.msg-text.streaming::after {
+  content: '▋';
+  display: inline-block;
+  margin-left: 2px;
+  animation: blink-cursor 0.7s steps(1) infinite;
+  color: #ff7a2f;
+  font-size: 13px;
+}
+@keyframes blink-cursor {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* 初始跳点动画（内容为空时） */
+.typing-bubble-inner {
+  padding: 4px 0;
 }
 .typing-dots span {
   display: inline-block;
@@ -470,7 +499,6 @@ function scrollToBottom() {
 }
 .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
 .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
-
 @keyframes typing {
   0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
   30% { transform: translateY(-8px); opacity: 1; }
@@ -485,10 +513,6 @@ function scrollToBottom() {
   border-top: 1px solid #ebeef5;
   background: #fff;
 }
-.msg-input {
-  flex: 1;
-}
-.send-btn {
-  flex-shrink: 0;
-}
+.msg-input { flex: 1; }
+.send-btn { flex-shrink: 0; }
 </style>

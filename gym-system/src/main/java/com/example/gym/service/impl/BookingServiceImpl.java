@@ -71,7 +71,7 @@ public class BookingServiceImpl extends ServiceImpl<BookingMapper, CourseBooking
         RLock lock = redissonClient.getLock(lockKey);
 
         try {
-            boolean isLocked = lock.tryLock(1, 10, TimeUnit.SECONDS);
+            boolean isLocked = lock.tryLock(3, 10, TimeUnit.SECONDS);
             if (!isLocked) {
                 throw new BusinessException(ErrorCode.BIZ_LOCK_TIMEOUT);
             }
@@ -178,11 +178,21 @@ public class BookingServiceImpl extends ServiceImpl<BookingMapper, CourseBooking
                     "订单已取消，请勿重复操作");
         }
 
+        // 原子状态转移：防止并发取消导致双倍退款/回库存
+        int updated = baseMapper.update(null, new LambdaUpdateWrapper<CourseBooking>()
+                .set(CourseBooking::getStatus, BookingStatus.CANCELLED.getCode())
+                .eq(CourseBooking::getId, bookingId)
+                .ne(CourseBooking::getStatus, BookingStatus.CANCELLED.getCode()));
+        if (updated == 0) {
+            throw new BusinessException(ErrorCode.BIZ_BOOKING_STATUS_ILLEGAL,
+                    "订单已取消，请勿重复操作");
+        }
+
         if (status == BookingStatus.PAID) {
             BigDecimal refundAmount = booking.getRealPrice();
             if (refundAmount.compareTo(BigDecimal.ZERO) > 0) {
                 userMapper.update(null, new LambdaUpdateWrapper<SysUser>()
-                        .setSql("balance = balance + " + refundAmount)
+                        .setSql("balance = balance + {0}", refundAmount)
                         .eq(SysUser::getId, booking.getUserId()));
             }
             courseMapper.update(null, new LambdaUpdateWrapper<GymCourse>()
@@ -194,9 +204,6 @@ public class BookingServiceImpl extends ServiceImpl<BookingMapper, CourseBooking
                     .setSql("stock = stock + 1")
                     .eq(GymCourse::getId, booking.getCourseId()));
         }
-
-        booking.setStatus(BookingStatus.CANCELLED.getCode());
-        baseMapper.updateById(booking);
     }
 
     @Override
@@ -218,8 +225,18 @@ public class BookingServiceImpl extends ServiceImpl<BookingMapper, CourseBooking
             throw new BusinessException(ErrorCode.BIZ_BALANCE_NOT_ENOUGH);
         }
 
+        // 原子状态转移：先抢占 PENDING→PAID，防止并发双重支付
+        int updated = baseMapper.update(null, new LambdaUpdateWrapper<CourseBooking>()
+                .set(CourseBooking::getStatus, BookingStatus.PAID.getCode())
+                .eq(CourseBooking::getId, bookingId)
+                .eq(CourseBooking::getStatus, BookingStatus.PENDING.getCode()));
+        if (updated == 0) {
+            throw new BusinessException(ErrorCode.BIZ_BOOKING_STATUS_ILLEGAL,
+                    "订单状态异常，无法支付");
+        }
+
         int rows = userMapper.update(null, new LambdaUpdateWrapper<SysUser>()
-                .setSql("balance = balance - " + booking.getRealPrice())
+                .setSql("balance = balance - {0}", booking.getRealPrice())
                 .eq(SysUser::getId, user.getId())
                 .ge(SysUser::getBalance, booking.getRealPrice()));
 
@@ -227,8 +244,5 @@ public class BookingServiceImpl extends ServiceImpl<BookingMapper, CourseBooking
             throw new BusinessException(ErrorCode.BIZ_BALANCE_NOT_ENOUGH,
                     "支付失败，余额发生变动");
         }
-
-        booking.setStatus(BookingStatus.PAID.getCode());
-        baseMapper.updateById(booking);
     }
 }

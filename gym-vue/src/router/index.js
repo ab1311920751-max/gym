@@ -22,6 +22,7 @@ const routes = [
       { path: 'course/:id', name: 'CourseDetail', component: () => import('../views/CourseDetail.vue') },
       { path: 'my-booking', name: 'MyBooking', component: () => import('../views/MyBooking.vue') },
       { path: 'wallet', name: 'Wallet', component: () => import('../views/Wallet.vue') },
+      { path: 'profile', name: 'Profile', component: () => import('../views/Profile.vue') },
       { path: 'ai-chat', name: 'AiChat', component: () => import('../views/AiChat.vue') },
       {
       path: '/pay/success',

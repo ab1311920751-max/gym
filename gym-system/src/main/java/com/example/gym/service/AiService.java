@@ -2,11 +2,14 @@ package com.example.gym.service;
 
 import com.example.gym.vo.AiChatMessageVO;
 import com.example.gym.vo.AiChatSessionVO;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
 
 public interface AiService {
     AiChatMessageVO chat(Long userId, Long sessionId, String message);
+
+    void chatStream(Long userId, Long sessionId, String message, SseEmitter emitter);
 
     List<AiChatSessionVO> getSessions(Long userId);
 

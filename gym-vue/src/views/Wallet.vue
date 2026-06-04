@@ -1,58 +1,8 @@
 <template>
   <div class="wallet-page">
-    <!-- 顶部：用户档案 + 余额 -->
+    <!-- 余额卡片 -->
     <el-row :gutter="20">
-      <el-col :xs="24" :md="9">
-        <el-card shadow="never" class="profile-card">
-          <div class="profile-row">
-            <div class="profile-avatar">
-              {{ (user.username || 'U').charAt(0).toUpperCase() }}
-            </div>
-            <div class="profile-meta">
-              <div class="profile-name-row">
-                <div class="profile-name">{{ user.username || '—' }}</div>
-                <el-button class="edit-nickname-btn" :icon="Edit" circle size="small" @click="showNicknameDialog" />
-              </div>
-              <el-tag size="small" :type="VIP_TAG_TYPE[user.vipType || 0]" effect="light">
-                {{ VIP_LABEL[user.vipType || 0] }}
-              </el-tag>
-            </div>
-          </div>
-
-          <div v-if="user.vipType > 0" class="vip-expire" :class="{ warn: expiring }">
-            <el-icon><AlarmClock /></el-icon>
-            <div>
-              <div>到期时间</div>
-              <div class="expire-time">{{ formatDate(user.vipExpireTime) }}</div>
-              <div v-if="expiring" class="warn-text">即将过期，建议尽快续费</div>
-            </div>
-          </div>
-          <div v-else class="vip-tip">
-            暂未开通 VIP，开通后可享 9 折 / 8 折购课优惠
-          </div>
-
-          <div class="password-link-row">
-            <el-button link type="primary" size="small" @click="showPasswordDialog">修改密码</el-button>
-          </div>
-
-          <div class="profile-details">
-            <div class="profile-detail" v-if="user.phone">
-              <span class="detail-icon">📱</span>
-              <span>{{ user.phone }}</span>
-            </div>
-            <div class="profile-detail" v-if="user.email">
-              <span class="detail-icon">📧</span>
-              <span>{{ user.email }}</span>
-            </div>
-            <div class="profile-detail" v-if="user.gender != null && user.gender !== 0">
-              <span class="detail-icon">{{ user.gender === 1 ? '♂' : '♀' }}</span>
-              <span>{{ user.gender === 1 ? '男' : '女' }}</span>
-            </div>
-          </div>
-        </el-card>
-      </el-col>
-
-      <el-col :xs="24" :md="15">
+      <el-col :xs="24" :md="14">
         <el-card shadow="never" class="balance-card">
           <div class="balance-bg"></div>
           <div class="balance-content">
@@ -169,70 +119,22 @@
         <el-button type="primary" @click="handleAlipay">前往支付</el-button>
       </template>
     </el-dialog>
-
-    <!-- 个人资料编辑弹窗 -->
-    <el-dialog v-model="nicknameDialogVisible" title="编辑个人资料" width="440px" align-center>
-      <el-form :model="nicknameForm" :rules="nicknameRules" ref="nicknameFormRef" label-position="top">
-        <el-form-item label="用户名" prop="username">
-          <el-input v-model="nicknameForm.username" placeholder="请输入用户名" maxlength="20" show-word-limit />
-        </el-form-item>
-        <el-form-item label="手机号" prop="phone">
-          <el-input v-model="nicknameForm.phone" placeholder="请输入手机号（选填）" maxlength="11" />
-        </el-form-item>
-        <el-form-item label="性别" prop="gender">
-          <el-radio-group v-model="nicknameForm.gender">
-            <el-radio :value="null">保密</el-radio>
-            <el-radio :value="1">男</el-radio>
-            <el-radio :value="2">女</el-radio>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="邮箱" prop="email">
-          <el-input v-model="nicknameForm.email" placeholder="请输入邮箱（选填）" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="nicknameDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleUpdateProfile">确认修改</el-button>
-      </template>
-    </el-dialog>
-
-    <!-- 密码修改弹窗 -->
-    <el-dialog v-model="passwordDialogVisible" title="修改密码" width="420px" align-center>
-      <el-form :model="passwordForm" :rules="passwordRules" ref="passwordFormRef" label-position="top">
-        <el-form-item label="原密码" prop="oldPassword">
-          <el-input v-model="passwordForm.oldPassword" type="password" show-password placeholder="请输入原密码" />
-        </el-form-item>
-        <el-form-item label="新密码" prop="newPassword">
-          <el-input v-model="passwordForm.newPassword" type="password" show-password placeholder="请输入新密码（至少6位）" />
-        </el-form-item>
-        <el-form-item label="确认新密码" prop="confirmPassword">
-          <el-input v-model="passwordForm.confirmPassword" type="password" show-password placeholder="请再次输入新密码" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="passwordDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleChangePassword">确认修改</el-button>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   Wallet,
   Medal,
   Calendar,
-  Trophy,
-  AlarmClock,
-  Edit
+  Trophy
 } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import dayjs from 'dayjs'
-import { getUserById, buyVip, updateProfile, changePassword } from '../api/user'
+import { getUserById, buyVip } from '../api/user'
 import { buildPayUrl, confirmRecharge } from '../api/alipay'
-import { VIP_TYPE, VIP_LABEL, VIP_TAG_TYPE, VIP_PRICE } from '../constants/vip'
+import { VIP_TYPE, VIP_PRICE } from '../constants/vip'
 
 const route = useRoute()
 const router = useRouter()
@@ -254,60 +156,7 @@ const rechargeRules = {
   ]
 }
 
-const nicknameDialogVisible = ref(false)
-const nicknameFormRef = ref(null)
-const nicknameForm = reactive({ username: '', phone: '', gender: null, email: '' })
-const nicknameRules = {
-  username: [
-    { required: true, message: '请输入用户名', trigger: 'blur' },
-    { min: 1, max: 20, message: '用户名长度在 1 到 20 个字符', trigger: 'blur' },
-    { pattern: /^\S+$/, message: '不能包含空格', trigger: 'blur' }
-  ],
-  phone: [
-    { pattern: /^1[3-9]\d{9}$/, message: '请输入有效的手机号', trigger: 'blur' }
-  ],
-  email: [
-    { type: 'email', message: '请输入有效的邮箱地址', trigger: 'blur' }
-  ]
-}
-
-const passwordDialogVisible = ref(false)
-const passwordFormRef = ref(null)
-const passwordForm = reactive({ oldPassword: '', newPassword: '', confirmPassword: '' })
-const validateConfirmPassword = (rule, value, cb) => {
-  if (value !== passwordForm.newPassword) {
-    cb(new Error('两次输入的密码不一致'))
-  } else {
-    cb()
-  }
-}
-const passwordRules = {
-  oldPassword: [{ required: true, message: '请输入原密码', trigger: 'blur' }],
-  newPassword: [
-    { required: true, message: '请输入新密码', trigger: 'blur' },
-    { min: 6, message: '密码长度不能少于6位', trigger: 'blur' }
-  ],
-  confirmPassword: [
-    { required: true, message: '请再次输入新密码', trigger: 'blur' },
-    { validator: validateConfirmPassword, trigger: 'blur' }
-  ]
-}
-
-const expiring = computed(() => isExpiringSoon(user.value.vipExpireTime))
-
 const formatMoney = (val) => (val == null ? '0.00' : Number(val).toFixed(2))
-
-const formatDate = (dateStr) => {
-  if (!dateStr) return '永久有效'
-  return dayjs(dateStr).format('YYYY年MM月DD日 HH:mm')
-}
-
-const isExpiringSoon = (dateStr) => {
-  if (!dateStr) return false
-  const expireTime = dayjs(dateStr)
-  const now = dayjs()
-  return expireTime.diff(now, 'day') <= 7 && expireTime.isAfter(now)
-}
 
 const loadUser = async () => {
   const localUser = JSON.parse(localStorage.getItem('user') || '{}')
@@ -410,57 +259,6 @@ const handleBuyVip = (type) => {
     .catch(() => {})
 }
 
-const showNicknameDialog = () => {
-  nicknameForm.username = user.value.username || ''
-  nicknameForm.phone = user.value.phone || ''
-  nicknameForm.gender = user.value.gender != null ? user.value.gender : null
-  nicknameForm.email = user.value.email || ''
-  nicknameDialogVisible.value = true
-}
-
-const handleUpdateProfile = async () => {
-  try {
-    await nicknameFormRef.value.validate()
-  } catch { return }
-  try {
-    await updateProfile({
-      username: nicknameForm.username,
-      phone: nicknameForm.phone || undefined,
-      gender: nicknameForm.gender,
-      email: nicknameForm.email || undefined
-    })
-    ElMessage.success('个人资料修改成功')
-    nicknameDialogVisible.value = false
-    loadUser()
-    window.dispatchEvent(new Event('refresh-user'))
-  } catch (e) {
-    console.error(e)
-  }
-}
-
-const showPasswordDialog = () => {
-  passwordForm.oldPassword = ''
-  passwordForm.newPassword = ''
-  passwordForm.confirmPassword = ''
-  passwordDialogVisible.value = true
-}
-
-const handleChangePassword = async () => {
-  try {
-    await passwordFormRef.value.validate()
-  } catch { return }
-  try {
-    await changePassword({
-      oldPassword: passwordForm.oldPassword,
-      newPassword: passwordForm.newPassword
-    })
-    ElMessage.success('密码修改成功，请牢记新密码')
-    passwordDialogVisible.value = false
-  } catch (e) {
-    console.error(e)
-  }
-}
-
 onMounted(async () => {
   const localUser = JSON.parse(localStorage.getItem('user') || '{}')
   user.value = localUser
@@ -477,93 +275,15 @@ onMounted(async () => {
   padding: 4px;
 }
 
-/* 用户档案卡片 */
-.profile-card {
-  border: none;
-  border-radius: 10px;
-  height: 100%;
-  min-height: 220px;
-}
-
-.profile-row {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  margin-bottom: 18px;
-}
-
-.profile-avatar {
-  width: 52px;
-  height: 52px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #ff8c42 0%, #ff6b1a 100%);
-  color: #fff;
-  font-size: 22px;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 12px rgba(255, 107, 26, 0.3);
-}
-
-.profile-name {
-  font-size: 18px;
-  font-weight: 700;
-  color: #1f2d3d;
-  margin-bottom: 4px;
-}
-
-.vip-expire {
-  background: #fff5ee;
-  border: 1px solid #ffe0cc;
-  border-radius: 8px;
-  padding: 12px 14px;
-  font-size: 13px;
-  color: #606266;
-  display: flex;
-  gap: 10px;
-  align-items: flex-start;
-}
-
-.vip-expire.warn {
-  background: #fef0f0;
-  border-color: #fbc4c4;
-  color: #f56c6c;
-}
-
-.expire-time {
-  font-weight: 600;
-  color: #1f2d3d;
-  margin-top: 2px;
-}
-
-.vip-expire.warn .expire-time {
-  color: #f56c6c;
-}
-
-.warn-text {
-  color: #f56c6c;
-  font-size: 12px;
-  margin-top: 4px;
-}
-
-.vip-tip {
-  background: #f5f7fa;
-  border-radius: 8px;
-  padding: 12px 14px;
-  font-size: 13px;
-  color: #909399;
-}
-
 /* 余额卡片 */
 .balance-card {
   border: none;
   border-radius: 10px;
-  height: 100%;
-  min-height: 220px;
+  min-height: 180px;
   position: relative;
   overflow: hidden;
   background: linear-gradient(135deg, #ff8c42 0%, #ff6b1a 100%);
+  margin-bottom: 24px;
 }
 
 .balance-card :deep(.el-card__body) {
@@ -627,7 +347,7 @@ onMounted(async () => {
 
 /* VIP 区 */
 .vip-section {
-  margin-top: 24px;
+  margin-top: 8px;
 }
 
 .section-title {
@@ -770,46 +490,5 @@ onMounted(async () => {
   color: #909399;
   font-size: 12px;
   margin-top: 8px;
-}
-
-.profile-name-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.edit-nickname-btn {
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-
-.profile-row:hover .edit-nickname-btn {
-  opacity: 1;
-}
-
-.password-link-row {
-  margin-top: 12px;
-  text-align: right;
-}
-
-.profile-details {
-  margin-top: 10px;
-  border-top: 1px solid #f0f0f0;
-  padding-top: 12px;
-}
-
-.profile-detail {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 0;
-  font-size: 13px;
-  color: #606266;
-}
-
-.detail-icon {
-  font-size: 14px;
-  width: 20px;
-  text-align: center;
 }
 </style>

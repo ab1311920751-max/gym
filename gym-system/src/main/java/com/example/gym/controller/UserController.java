@@ -83,7 +83,7 @@ public class UserController {
                            @RequestParam(required = false) String username) {
         LambdaQueryWrapper<SysUser> query = new LambdaQueryWrapper<>();
         query.like(StrUtil.isNotBlank(username), SysUser::getUsername, username);
-        query.orderByDesc(SysUser::getId);
+        query.orderByAsc(SysUser::getId);
         return Result.success(userService.page(new Page<>(pageNum, pageSize), query));
     }
 }

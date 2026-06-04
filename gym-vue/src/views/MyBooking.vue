@@ -20,7 +20,7 @@
 
       <el-table
         v-loading="loading"
-        :data="filteredList"
+        :data="pagedList"
         stripe
         empty-text="暂无订单"
         style="width: 100%"
@@ -58,9 +58,13 @@
           </template>
         </el-table-column>
 
-        <el-table-column prop="price" label="实付" width="100">
+        <el-table-column label="实付" width="130">
           <template #default="{ row }">
-            <span class="price">￥{{ row.price }}</span>
+            <span class="price">￥{{ row.realPrice ?? row.price }}</span>
+            <span
+              v-if="row.realPrice != null && row.realPrice !== row.price"
+              class="price-origin"
+            >￥{{ row.price }}</span>
           </template>
         </el-table-column>
 
@@ -96,12 +100,23 @@
           </template>
         </el-table-column>
       </el-table>
+
+      <div v-if="filteredList.length > PAGE_SIZE" class="pagination-bar">
+        <el-pagination
+          :current-page="currentPage"
+          :page-size="PAGE_SIZE"
+          :total="filteredList.length"
+          layout="prev, pager, next, total"
+          background
+          @current-change="(val) => (currentPage = val)"
+        />
+      </div>
     </el-card>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { List, Clock } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import dayjs from 'dayjs'
@@ -116,6 +131,8 @@ import {
 const list = ref([])
 const loading = ref(true)
 const activeTab = ref('all')
+const currentPage = ref(1)
+const PAGE_SIZE = 8
 
 const counts = computed(() => {
   const c = {
@@ -134,6 +151,13 @@ const filteredList = computed(() => {
   const target = Number(activeTab.value)
   return list.value.filter((row) => row.status === target)
 })
+
+const pagedList = computed(() => {
+  const start = (currentPage.value - 1) * PAGE_SIZE
+  return filteredList.value.slice(start, start + PAGE_SIZE)
+})
+
+watch(activeTab, () => { currentPage.value = 1 })
 
 const load = async () => {
   loading.value = true
@@ -259,5 +283,18 @@ onMounted(() => load())
   color: #ff7a2f;
   font-weight: 700;
   font-size: 15px;
+}
+
+.price-origin {
+  margin-left: 4px;
+  color: #c0c4cc;
+  font-size: 12px;
+  text-decoration: line-through;
+}
+
+.pagination-bar {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
 }
 </style>
