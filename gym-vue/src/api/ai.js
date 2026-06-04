@@ -1,12 +1,23 @@
 import request from '../utils/request'
 
+// AI 聊天接口，对应后端 /ai 路由
+// sendMessageStream 使用 fetch + ReadableStream 实现 SSE 流式接收（打字机效果）
+
+/** 同步发送消息，等 AI 完整回复后一次性返回。data: { sessionId, message } */
 export const sendMessage = (data) => request.post('/ai/chat', data)
+
+/** 获取当前用户的会话列表，按更新时间倒序 */
 export const getSessions = () => request.get('/ai/sessions')
+
+/** 获取指定会话的所有消息，按时间正序 */
 export const getMessages = (sessionId) => request.get(`/ai/sessions/${sessionId}/messages`)
+
+/** 删除指定会话及其所有消息 */
 export const deleteSession = (sessionId) => request.delete(`/ai/sessions/${sessionId}`)
 
 /**
- * 流式发送消息（fetch + ReadableStream）
+ * 流式发送消息（fetch + ReadableStream），实现打字机效果。
+ * 首帧接收 session 元数据（含 sessionId），中间帧为文字 chunk，末帧为 [DONE]。
  * @param {Object} data - { sessionId, message }
  * @param {Function} onSession - (sessionId: number) => void，收到首帧 session 元数据时触发
  * @param {Function} onChunk  - (chunk: string) => void，每个文字 chunk 触发

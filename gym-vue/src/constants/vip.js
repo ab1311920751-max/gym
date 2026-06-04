@@ -1,3 +1,9 @@
+/**
+ * VIP 会员类型常量定义。
+ * 包含类型枚举值、展示标签、Element Plus Tag 类型、价格、有效期天数、折扣标签。
+ * 与后端 SysUser.vipType 字段和 DiscountFactory 折扣策略保持一致。
+ */
+
 export const VIP_TYPE = {
   NORMAL: 0,
   MONTHLY: 1,

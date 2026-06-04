@@ -1,3 +1,9 @@
+/**
+ * 主题色常量定义。
+ * 以橙色（#ff7a2f）为主色调，定义主色、浅色、深色、渐变色等变体，
+ * 以及图表配色方案。供全局样式和 ECharts 图表组件使用。
+ */
+
 export const PRIMARY = '#ff7a2f'
 export const PRIMARY_LIGHT = '#ffb088'
 export const PRIMARY_DARK = '#e66117'

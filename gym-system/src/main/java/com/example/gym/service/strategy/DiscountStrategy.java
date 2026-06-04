@@ -3,9 +3,9 @@ package com.example.gym.service.strategy;
 import java.math.BigDecimal;
 
 /**
- * [Design Pattern] Strategy Pattern (策略模式)
- * 定义会员折扣计算的通用接口。
- * 作用：解耦具体的价格计算逻辑，方便后续扩展（如增加“黑金会员”）。
+ * 折扣计算策略接口（策略模式）。
+ * 每种 VIP 类型实现一个策略，新增等级只需加实现类并在 DiscountFactory 注册，
+ * 调用方不感知具体折扣逻辑。
  */
 public interface DiscountStrategy {
     BigDecimal calculate(BigDecimal originalPrice);

@@ -38,7 +38,7 @@ mysql -u root -p gym_db1 < gym-vue/db_backups/gym_db4.sql
 ```
 
 > README 中提到的 `migrate_v2.sql` 在当前仓库中并不存在；`gym_db4.sql` 已经是合并版的最新结构。如果用户提到迁移脚本缺失，按此说明即可，不要凭空创建。
-> 
+>
 > 根 README 引用了 `gym-system/README.md`，但该文件**实际不存在**。
 >
 > AI 客服所需的 `ai_chat_session` 和 `ai_chat_message` 两张表已在 `gym_db1` 中存在，无需重新建表。迁移脚本位于 `gym-vue/db_backups/migrate_ai.sql`（仅供参考）。
@@ -66,7 +66,7 @@ Controller → Service(impl) → Mapper → MySQL
               ↓
            strategy/         （DiscountFactory + DiscountStrategy）
 DTO（入参）  Entity（表映射）  VO（响应）  Enum（状态/类型）
-common/      → Result<T>、GlobalExceptionHandler
+common/      → Result<T>、GlobalExceptionHandler、ErrorCode
 config/      → AliPayConfig、CorsConfig
 ```
 
@@ -74,6 +74,50 @@ config/      → AliPayConfig、CorsConfig
 - Service 接口在 `service/`，实现在 `service/impl/`。新增业务时遵循"接口 + 实现"分离的现有约定。
 - 折扣计算走策略模式：`DiscountFactory.get(vipType).apply(price)`。新增 VIP 等级时只需要新增 `DiscountStrategy` 实现并在工厂注册，**不要**在业务代码里写 `if (vipType == ...)` 分支（参见 ADR-0002）。
 - 业务异常用 `BusinessException` / `UnauthorizedException` 抛出，不要返回错误码 Map。
+
+### 主要 Controller 与端点
+
+| Controller | 前缀 | 主要端点 |
+|---|---|---|
+| `AuthController` | `/auth` | `POST /login`、`POST /register` |
+| `UserController` | `/user` | `GET /page`、`GET /{id}`、`POST`、`PUT`、`PUT /profile`、`PUT /password`、`PUT /{id}/status`、`DELETE /{id}`、`POST /recharge`、`POST /buyVip` |
+| `CourseController` | `/course` | `GET /list`（支持 `?category=` 筛选）、`GET /page`（支持名称/分类筛选）、`GET /{id}`、`POST`、`PUT`、`DELETE /{id}` |
+| `BookingController` | `/booking` | `POST /create`、`GET /my`、`POST /cancel/{id}`、`POST /pay/{id}` |
+| `AlipayController` | `/alipay` | `GET /pay`（课程/充值双模式）、`GET /return`（课程支付回调）、`POST /success`（充值回调） |
+| `BannerController` | `/banner` | `GET /list`（仅 status=1）、`GET /page`、`POST`、`PUT`、`DELETE /{id}` |
+| `ReportController` | `/report` | `GET /dashboard`（用户数、订单数、总收入、VIP 分布） |
+| `AiController` | `/ai` | `POST /chat`、`POST /chat/stream`（SSE）、`GET /sessions`、`GET /sessions/{id}/messages`、`DELETE /sessions/{id}` |
+
+### 主要实体字段
+
+**SysUser**（表 `sys_user`）
+- `id`、`username`、`password`、`role`（"admin"/"user"）
+- `balance`（余额）、`vipType`（0=普通，1=月卡，2=年卡）、`vipExpireTime`
+- `nickname`、`phone`、`gender`、`email`
+- `status`（0=禁用，1=正常）、`createTime`
+
+**GymCourse**（表 `gym_course`）
+- `id`、`name`、`coach`、`description`、`content`（详细内容）
+- `category`（课程分类，对应 `COURSE_CATEGORIES` 常量）
+- `startTime`（`LocalDateTime`，对应数据库 `start_time` 字段）
+- `capacity`（最大人数）、`stock`（库存）、`price`
+- `version`（乐观锁字段，`@TableField(fill = FieldFill.INSERT)`；`@Version` 注解当前注释掉）
+
+### 错误码（`ErrorCode` 枚举）
+
+| 范围 | 含义 |
+|---|---|
+| 200 | 成功 |
+| 400 | 参数/业务异常（通用） |
+| 401 | 未登录或 token 过期 |
+| 403 | 无权访问 |
+| 404 | 资源不存在 |
+| 4001–4006 | 用户相关（不存在、密码错、用户名重复、原密码错、账号禁用、不能禁用自己） |
+| 4101 | 余额不足 |
+| 4201–4205 | 课程/预约相关（不存在、售罄、已过期、重复预约、时间冲突） |
+| 4301–4302 | 订单相关（不存在、状态非法） |
+| 4901 | 分布式锁超时（抢购人数过多） |
+| 500 | 系统错误 |
 
 ### 高并发抢课（核心路径）
 
@@ -102,27 +146,67 @@ config/      → AliPayConfig、CorsConfig
 
 ## 前端架构
 
-> `src/components/` 目录当前为空（`HelloWorld.vue` 脚手架代码已删除）。
+> `src/components/` 目录当前为空（脚手架代码已删除）。
+
+### 页面视图（`src/views/`，共 13 个）
+
+| 文件 | 路由路径 | 说明 |
+|---|---|---|
+| `Login.vue` | `/login` | 登录页（白名单，未登录可访问） |
+| `Layout.vue` | `/`（壳） | 主布局（侧边栏 + 顶栏） |
+| `Home.vue` | `/home` | 数据驾驶舱（ECharts 图表） |
+| `Course.vue` | `/course` | 课程列表（支持分类/状态/排序筛选） |
+| `CourseDetail.vue` | `/course/:id` | 课程详情页 |
+| `MyBooking.vue` | `/my-booking` | 我的预约 |
+| `Wallet.vue` | `/wallet` | 钱包/充值/购买 VIP |
+| `Profile.vue` | `/profile` | 个人资料修改 |
+| `AiChat.vue` | `/ai-chat` | AI 对话（会话列表 + SSE 流式） |
+| `PaySuccess.vue` | `/pay/success` | 支付宝同步回调落地页 |
+| `UserHome.vue` | — | 用户首页子组件（由 Home.vue 引用） |
+| `AdminCourse.vue` | `/admin-course` | 课程管理（仅管理员） |
+| `AdminUser.vue` | `/admin-user` | 用户管理（仅管理员） |
 
 ### 路由与权限
 
-`src/router/index.js` 用 Vue Router 4，所有受保护页面挂在 `Layout` 下作为子路由。`beforeEach` 守卫（具体实现见文件，此处只列规则）：
+`src/router/index.js` 用 Vue Router 4，所有受保护页面挂在 `Layout` 下作为子路由。`beforeEach` 守卫规则：
 1. `/login` 白名单，直接放行；
 2. `localStorage.token` 和 `localStorage.user` **双重校验**——任一缺失或 user 无有效 id 即清除残留数据并跳登录；
-3. `/admin-*` 仅 `role === 'admin'` 可访问，否则 `ElMessage.error` + 跳首页；
-4. 后端 `JwtInterceptor` + 前端 Axios 401 拦截器作为第二道防线，token 过期时由后端 401 触发 `redirectToLogin()`。
+3. **Token 过期检查**——解析 JWT payload 的 `exp` 字段，过期则清除并跳登录（`ElMessage.warning`）；
+4. `/admin-*` 仅 `role === 'admin'` 可访问，否则 `ElMessage.error` + 跳首页；
+5. 后端 `JwtInterceptor` + 前端 Axios 401 拦截器作为第二道防线，token 过期时由后端 401 触发 `redirectToLogin()`。
 
 新增管理员页面时，命名必须以 `admin-` 前缀，否则会绕过权限。新增受保护页面要挂在 `Layout` 子路由里。
 
-### API 调用
+### API 调用（`src/api/`，共 8 个文件）
 
-所有 HTTP 调用经过 `src/utils/request.js`（Axios 实例 + token 注入 + 错误拦截）。API 调用已收拢到 `src/api/`（按模块拆分，如 `auth.js`、`booking.js`、`course.js`），常量定义在 `src/constants/`（如 `booking.js`、`vip.js`、`role.js`）。新增页面时遵循此约定，不要把 axios 调用零散写进 `.vue`。
+| 文件 | 说明 |
+|---|---|
+| `auth.js` | 登录、注册 |
+| `user.js` | 用户信息查询、充值、VIP 购买、密码修改 |
+| `course.js` | 课程列表（含分类筛选）、课程详情、管理员 CRUD |
+| `booking.js` | 创建/取消/支付预约 |
+| `alipay.js` | 发起支付宝支付 |
+| `banner.js` | Banner 展示与管理 |
+| `report.js` | 数据驾驶舱统计 |
+| `ai.js` | AI 聊天、会话管理 |
+
+所有 HTTP 调用经过 `src/utils/request.js`（Axios 实例 + token 注入 + 错误拦截）。不要把 axios 调用零散写进 `.vue`。
 
 `request.js` 响应拦截器中 `res.code === '200'` 是**字符串**比较（不是数字），定义新接口时 code 字段务必返回字符串 `"200"`。401 时清除 localStorage 并跳 `/login`。
 
+### 常量（`src/constants/`，共 5 个文件）
+
+| 文件 | 内容 |
+|---|---|
+| `role.js` | 用户角色常量（admin/user） |
+| `booking.js` | 预约状态常量（PENDING/PAID/CANCELLED） |
+| `vip.js` | VIP 类型常量（普通/月卡/年卡）及折扣信息 |
+| `course.js` | 课程分类 `COURSE_CATEGORIES`（有氧训练、力量训练等 6 类）、`STATUS_OPTIONS`、`SORT_OPTIONS` |
+| `theme.js` | 主题颜色常量 |
+
 ### 数据可视化
 
-数据驾驶舱（首页/管理首页）使用 ECharts 6。注意 ECharts 6 与 5 的 API 有少量差异，参考已有图表实现。
+数据驾驶舱（`Home.vue`）使用 ECharts 6（`echarts@^6.0.0`）。注意 ECharts 6 与 5 的 API 有少量差异，参考已有图表实现。
 
 ### AI 集成（双通道）
 
@@ -130,7 +214,7 @@ config/      → AliPayConfig、CorsConfig
 
 1. **Coze SDK 浮窗**（`index.html`）：第三方 AI 聊天机器人，通过 CDN 加载 Coze Web SDK，bot_id 和 PAT token 硬编码在 `<script>` 标签中。浮窗按钮出现在所有页面（包括登录页），是一个完全独立的外部 AI 通道。
 
-2. **AiChat.vue**（`src/views/AiChat.vue`）：自建 AI 对话页面，路由挂在 Layout 子路由下。左侧会话列表 + 右侧流式聊天区，调用后端 `POST /ai/chat/stream` SSE 接口。后端 `AiServiceImpl` 对接 DeepSeek API（`deepseek-chat` 模型），支持多轮上下文（历史存 `ai_chat_session` / `ai_chat_message` 表），每次请求携带最近 20 条对话历史。`application.yml` 的 `deepseek.enabled` 为总开关，关闭时抛错提示"AI 功能未开启"。
+2. **AiChat.vue**（`src/views/AiChat.vue`）：自建 AI 对话页面，路由挂在 Layout 子路由下。左侧会话列表 + 右侧流式聊天区，调用后端 `POST /ai/chat/stream` SSE 接口。后端 `AiServiceImpl` 对接 DeepSeek API（`deepseek-chat` 模型），支持多轮上下文（历史存 `ai_chat_session` / `ai_chat_message` 表），每次请求携带最近 20 条对话历史。`application.yml` 的 `deepseek.enabled` 为总开关，关闭时抛错提示"AI 功能未开启"。DeepSeek API Key 优先读环境变量 `DEEPSEEK_API_KEY`，未设置则回退到 yml 中的硬编码默认值。
 
 ### 状态管理
 
@@ -154,6 +238,8 @@ config/      → AliPayConfig、CorsConfig
 
 - Mapper 返回业务对象时一律用 VO，不要用 `Map<String, Object>`（ADR-0005）。
 - Controller 永远返回 `Result<T>`，不要直接抛 `ResponseEntity` 或裸 Map。
-- 新增业务异常优先继承 `BusinessException`，并附带可被前端识别的错误码。
+- 新增业务异常优先继承 `BusinessException`，并附带 `ErrorCode` 枚举中对应的错误码。
 - 新增枚举/状态时把"可读 API"（如 `canCancel()`、`isExpired()`）一起加上，避免下游写散开的 if/switch。
 - 前后端默认端口是 8080 / 5173；CORS 在 `CorsConfig` 中配置，调整端口需同步两端。
+- 课程分类字符串必须与 `src/constants/course.js` 中 `COURSE_CATEGORIES` 的 `value` 值保持一致，不要随意增删分类而不同步前端常量。
+- 用户账号有 `status` 字段（0=禁用，1=正常），禁用用户登录时抛 `BIZ_USER_DISABLED`；管理员不能禁用自己（`BIZ_CANNOT_DISABLE_SELF`）。

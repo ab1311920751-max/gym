@@ -10,6 +10,13 @@ import org.springframework.web.method.support.ModelAndViewContainer;
 
 import jakarta.servlet.http.HttpServletRequest;
 
+/**
+ * @CurrentUserId 注解的参数解析器，将 JwtInterceptor 写入 RequestAttribute 的 uid
+ * 自动注入到 Controller 方法的 Long 类型参数。
+ *
+ * 用法：Controller 方法声明 @CurrentUserId Long userId，框架自动填值，无需从请求体取。
+ * 不从请求体/URL 取 userId 的原因：客户端可以随意填写请求参数，从 token 解析才是可信来源。
+ */
 @Component
 public class CurrentUserIdResolver implements HandlerMethodArgumentResolver {
 

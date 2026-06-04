@@ -1,3 +1,10 @@
+/**
+ * 课程相关常量定义。
+ * 包含课程分类选项、课程状态筛选选项、排序选项，
+ * 供课程列表页的筛选和排序组件使用。
+ * 分类 value 需与后端 GymCourse.category 字段值保持一致。
+ */
+
 export const COURSE_CATEGORIES = [
   { label: '全部', value: '' },
   { label: '有氧训练', value: '有氧训练' },

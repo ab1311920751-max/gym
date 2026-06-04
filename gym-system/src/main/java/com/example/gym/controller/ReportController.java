@@ -17,6 +17,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 数据报表控制器，为管理员数据驾驶舱（Home.vue）提供统计数据。
+ * 当前仅有一个 /dashboard 接口，后续可在此扩展更多报表维度。
+ */
 @RestController
 @RequestMapping("/report")
 @RequiredArgsConstructor
@@ -25,8 +29,15 @@ public class ReportController {
     private final UserService userService;
     private final BookingService bookingService;
 
+    /**
+     * 数据驾驶舱汇总接口，一次性返回以下数据：
+     * - userCount：总用户数
+     * - orderCount：总订单数（含待支付、已支付、已取消）
+     * - totalRevenue：实收总金额（仅计算 status=PAID 的订单）
+     * - vipData：各会员等级人数分布，格式符合 ECharts 饼图数据结构
+     */
     @GetMapping("/dashboard")
-    public Result getDashboardData() {
+    public Result<Map<String, Object>> getDashboardData() {
         Map<String, Object> map = new HashMap<>();
 
         // 1. 统计总用户数

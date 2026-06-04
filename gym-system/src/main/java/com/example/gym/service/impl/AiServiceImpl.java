@@ -41,12 +41,26 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+/**
+ * AI 客服业务实现，实现 AiService 接口，对接 DeepSeek API。
+ * <p>
+ * 提供同步和 SSE 流式两种调用方式。核心机制：
+ * <ul>
+ *   <li>每次请求拼接 System Prompt（含用户实时信息：余额、VIP、可预约课程、历史预约）</li>
+ *   <li>携带最近 {@link #HISTORY_LIMIT} 条历史消息，控制 token 消耗</li>
+ *   <li>同步模式等完整回复后一次性返回</li>
+ *   <li>流式模式在新线程中逐 chunk 推送，支持客户端断连时保存已接收内容</li>
+ * </ul>
+ * 会话管理支持新建、列表查询（带最后消息预览）、消息查询、删除。
+ * <p>
+ * API Key 优先读环境变量 DEEPSEEK_API_KEY，未设置则回退到 application.yml 配置。
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class AiServiceImpl implements AiService {
 
-    // 传给 DeepSeek 的最近消息条数（含 user + assistant）
+    // 每次请求携带的最近历史消息条数（user + assistant 合计），控制 token 消耗
     private static final int HISTORY_LIMIT = 20;
 
     private final UserMapper userMapper;
@@ -56,6 +70,7 @@ public class AiServiceImpl implements AiService {
     private final AiChatMessageMapper messageMapper;
     private final DeepSeekConfig deepSeekConfig;
 
+    // System Prompt 模板，%s 位置由 getContextPrompt() 填入当前用户的实时信息
     private static final String SYSTEM_PROMPT_TEMPLATE =
             "你是「FitLife 健身房」的 AI 智能客服，名叫小健。\n\n"
             + "【你的能力范围】\n"
@@ -123,6 +138,11 @@ public class AiServiceImpl implements AiService {
                 .build();
     }
 
+    /**
+     * SSE 流式推送：在新线程中调用 DeepSeek stream 接口，每收到一个 chunk 立即推给前端。
+     * 首帧先发 sessionId（新建会话时前端需要用它做后续请求），末帧发 [DONE] 通知前端结束。
+     * 客户端断连时捕获 ClientDisconnectedException，保存已收到的部分回复后安静退出。
+     */
     @Override
     public void chatStream(Long userId, Long sessionId, String message, SseEmitter emitter) {
         if (StrUtil.isBlank(message)) {
@@ -149,7 +169,7 @@ public class AiServiceImpl implements AiService {
         new Thread(() -> {
             StringBuilder fullReply = new StringBuilder();
             try {
-                // 首帧：传递 sessionId 给前端（新会话时必须）
+                // 首帧传 sessionId，让前端（新会话场景）得知服务端分配的 sessionId
                 emitter.send(SseEmitter.event()
                         .data("{\"type\":\"session\",\"sessionId\":" + fSessionId + "}"));
 
@@ -168,6 +188,7 @@ public class AiServiceImpl implements AiService {
 
             } catch (ClientDisconnectedException e) {
                 log.info("客户端已断开，会话 {}", fSessionId);
+                // 保存已推送的部分内容，避免对话记录丢失
                 if (!fullReply.isEmpty()) {
                     saveAssistantMessage(fSessionId, fullReply.toString());
                 }
@@ -244,6 +265,7 @@ public class AiServiceImpl implements AiService {
         SysUser user = userMapper.selectById(userId);
         if (user == null) return "用户信息不存在";
 
+        // 只取近期有库存的课程，避免 prompt 过长消耗过多 token
         List<GymCourse> courses = courseMapper.selectList(new LambdaQueryWrapper<GymCourse>()
                 .ge(GymCourse::getStartTime, LocalDateTime.now())
                 .gt(GymCourse::getStock, 0)
@@ -294,6 +316,7 @@ public class AiServiceImpl implements AiService {
 
     private AiChatSession getOrCreateSession(Long userId, Long sessionId, String message) {
         if (sessionId == null) {
+            // sessionId 为 null 表示新建会话，取消息前 20 字作为会话标题
             AiChatSession session = new AiChatSession();
             session.setUserId(userId);
             session.setTitle(message.length() > 20 ? message.substring(0, 20) : message);
@@ -325,13 +348,13 @@ public class AiServiceImpl implements AiService {
     }
 
     private String buildRequestBody(Long sessionId, String context, boolean stream) {
-        // 用 replace 而非 String.format，避免 context 中含 % 导致 FormatException
+        // 用 replace 而非 String.format，避免 context 含 % 字符时触发 FormatException
         String systemPrompt = SYSTEM_PROMPT_TEMPLATE.replace("%s", context);
 
         JSONArray messages = new JSONArray();
         messages.put(new JSONObject().set("role", "system").set("content", systemPrompt));
 
-        // 取最近 HISTORY_LIMIT 条（倒序后翻转，保证时间顺序）
+        // 倒序取最近 HISTORY_LIMIT 条后翻转，保证发给 DeepSeek 的消息仍是时间正序
         List<AiChatMessage> history = messageMapper.selectList(
                 new LambdaQueryWrapper<AiChatMessage>()
                         .eq(AiChatMessage::getSessionId, sessionId)
@@ -383,6 +406,10 @@ public class AiServiceImpl implements AiService {
         return content;
     }
 
+    /**
+     * 调用 DeepSeek 流式接口（stream=true），逐行解析 SSE 格式的响应。
+     * 每行格式为 "data: {...json...}"，取 choices[0].delta.content 回调给调用方。
+     */
     private void callDeepSeekStream(Long sessionId, String context, ChunkConsumer consumer) throws Exception {
         String url = deepSeekConfig.getBaseUrl() + "/chat/completions";
         String requestBody = buildRequestBody(sessionId, context, true);
