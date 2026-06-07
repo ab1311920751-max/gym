@@ -17,6 +17,8 @@ import com.example.gym.mapper.UserMapper;
 import com.example.gym.service.BookingService;
 import com.example.gym.service.strategy.DiscountFactory;
 import com.example.gym.vo.BookingVO;
+import com.example.gym.vo.DailyTrendVO;
+import com.example.gym.vo.RankItemVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RLock;
@@ -222,6 +224,21 @@ public class BookingServiceImpl extends ServiceImpl<BookingMapper, CourseBooking
                     .setSql("stock = stock + 1")
                     .eq(GymCourse::getId, booking.getCourseId()));
         }
+    }
+
+    @Override
+    public List<DailyTrendVO> getDailyTrend(int days) {
+        return baseMapper.selectDailyTrend(days);
+    }
+
+    @Override
+    public List<RankItemVO> getCourseRank(int limit) {
+        return baseMapper.selectCourseRank(limit);
+    }
+
+    @Override
+    public List<RankItemVO> getCategoryStats() {
+        return baseMapper.selectCategoryStats();
     }
 
     @Override

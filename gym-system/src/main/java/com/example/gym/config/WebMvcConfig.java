@@ -48,6 +48,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
                         "/alipay/return",    // 支付宝同步回调
                         "/alipay/notify",    // 支付宝异步通知
                         "/banner/list",      // 首页轮播图（未登录可见）
+                        "/comment/course/**", // 课程评论列表（未登录可查看）
                         "/error"
                 );
     }

@@ -15,6 +15,7 @@ import java.time.LocalDateTime;
 public class BookingVO {
     private Long id;
     private Integer status;
+    private String bookingNo;
     private LocalDateTime bookingTime;
     private String courseName;
     private String coach;

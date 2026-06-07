@@ -64,6 +64,65 @@
         </el-card>
       </el-col>
     </el-row>
+
+    <!-- 近 7 天订单与营收趋势（全宽） -->
+    <el-row :gutter="20" class="chart-row">
+      <el-col :xs="24">
+        <el-card shadow="never" class="chart-card">
+          <template #header>
+            <div class="chart-header">
+              <el-icon><TrendCharts /></el-icon>
+              <span>近 7 天订单与营收趋势</span>
+            </div>
+          </template>
+          <div v-if="loading" class="chart-skeleton">
+            <el-skeleton :rows="6" animated />
+          </div>
+          <div v-else ref="trendRef" class="chart-box"></div>
+        </el-card>
+      </el-col>
+    </el-row>
+
+    <!-- 课程分类分布 + 热度排行 -->
+    <el-row :gutter="20" class="chart-row">
+      <el-col :xs="24" :md="12">
+        <el-card shadow="never" class="chart-card">
+          <template #header>
+            <div class="chart-header">
+              <el-icon><Histogram /></el-icon>
+              <span>课程分类预约分布</span>
+            </div>
+          </template>
+          <div v-if="loading" class="chart-skeleton">
+            <el-skeleton :rows="6" animated />
+          </div>
+          <el-empty
+            v-else-if="!report.categoryData || report.categoryData.length === 0"
+            description="暂无数据"
+          />
+          <div v-else ref="categoryRef" class="chart-box"></div>
+        </el-card>
+      </el-col>
+
+      <el-col :xs="24" :md="12">
+        <el-card shadow="never" class="chart-card">
+          <template #header>
+            <div class="chart-header">
+              <el-icon><List /></el-icon>
+              <span>课程热度 TOP 8</span>
+            </div>
+          </template>
+          <div v-if="loading" class="chart-skeleton">
+            <el-skeleton :rows="6" animated />
+          </div>
+          <el-empty
+            v-else-if="!report.courseRank || report.courseRank.length === 0"
+            description="暂无数据"
+          />
+          <div v-else ref="rankRef" class="chart-box chart-box--tall"></div>
+        </el-card>
+      </el-col>
+    </el-row>
   </div>
 </template>
 
@@ -75,7 +134,10 @@ import {
   Tickets,
   Medal,
   PieChart,
-  DataAnalysis
+  DataAnalysis,
+  TrendCharts,
+  Histogram,
+  List
 } from '@element-plus/icons-vue'
 import * as echarts from 'echarts'
 import { getDashboard } from '../api/report'
@@ -90,7 +152,13 @@ const isAdmin = computed(() => user.role === ROLE.ADMIN)
 const report = ref({})
 const loading = ref(true)
 const pieRef = ref(null)
+const trendRef = ref(null)
+const categoryRef = ref(null)
+const rankRef = ref(null)
 let pieInstance = null
+let trendInstance = null
+let categoryInstance = null
+let rankInstance = null
 
 const kpiList = computed(() => [
   {
@@ -153,6 +221,9 @@ const loadData = async () => {
   }
   await nextTick()
   renderPie()
+  renderTrend()
+  renderCategory()
+  renderRank()
 }
 
 const renderPie = () => {
@@ -190,8 +261,98 @@ const renderPie = () => {
   })
 }
 
+const renderTrend = () => {
+  if (!trendRef.value) return
+  trendInstance?.dispose()
+  trendInstance = echarts.init(trendRef.value)
+  const trend = report.value.trendData || []
+  const dates = trend.map((d) => d.date)
+  const counts = trend.map((d) => d.bookingCount)
+  const revenues = trend.map((d) => Number(d.revenue))
+  trendInstance.setOption({
+    color: CHART_COLORS,
+    tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } },
+    legend: { data: ['订单数', '营收(元)'], bottom: 0 },
+    grid: { left: '3%', right: '4%', bottom: '12%', containLabel: true },
+    xAxis: { type: 'category', data: dates },
+    yAxis: [
+      { type: 'value', name: '订单数', minInterval: 1 },
+      { type: 'value', name: '营收(元)', axisLabel: { formatter: '¥{value}' } }
+    ],
+    series: [
+      {
+        name: '订单数',
+        type: 'bar',
+        data: counts,
+        itemStyle: { borderRadius: [4, 4, 0, 0] },
+        barMaxWidth: 40
+      },
+      {
+        name: '营收(元)',
+        type: 'line',
+        yAxisIndex: 1,
+        data: revenues,
+        smooth: true,
+        symbol: 'circle',
+        symbolSize: 6,
+        lineStyle: { width: 2 }
+      }
+    ]
+  })
+}
+
+const renderCategory = () => {
+  if (!categoryRef.value) return
+  categoryInstance?.dispose()
+  categoryInstance = echarts.init(categoryRef.value)
+  const data = report.value.categoryData || []
+  categoryInstance.setOption({
+    color: CHART_COLORS,
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    grid: { left: '3%', right: '4%', bottom: '10%', containLabel: true },
+    xAxis: { type: 'category', data: data.map((d) => d.name), axisLabel: { interval: 0, rotate: 15 } },
+    yAxis: { type: 'value', name: '预约量', minInterval: 1 },
+    series: [
+      {
+        name: '预约量',
+        type: 'bar',
+        data: data.map((d) => d.value),
+        itemStyle: { borderRadius: [4, 4, 0, 0] },
+        barMaxWidth: 50
+      }
+    ]
+  })
+}
+
+const renderRank = () => {
+  if (!rankRef.value) return
+  rankInstance?.dispose()
+  rankInstance = echarts.init(rankRef.value)
+  const data = [...(report.value.courseRank || [])].reverse()
+  rankInstance.setOption({
+    color: CHART_COLORS,
+    tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+    grid: { left: '3%', right: '8%', bottom: '4%', top: '4%', containLabel: true },
+    xAxis: { type: 'value', name: '预约量', minInterval: 1 },
+    yAxis: { type: 'category', data: data.map((d) => d.name) },
+    series: [
+      {
+        name: '预约量',
+        type: 'bar',
+        data: data.map((d) => d.value),
+        itemStyle: { borderRadius: [0, 4, 4, 0] },
+        barMaxWidth: 30,
+        label: { show: true, position: 'right' }
+      }
+    ]
+  })
+}
+
 const handleResize = () => {
   pieInstance?.resize()
+  trendInstance?.resize()
+  categoryInstance?.resize()
+  rankInstance?.resize()
 }
 
 onMounted(() => {
@@ -205,7 +366,10 @@ onBeforeUnmount(() => {
   if (isAdmin.value) {
     window.removeEventListener('resize', handleResize)
     pieInstance?.dispose()
-    pieInstance = null
+    trendInstance?.dispose()
+    categoryInstance?.dispose()
+    rankInstance?.dispose()
+    pieInstance = trendInstance = categoryInstance = rankInstance = null
   }
 })
 </script>
@@ -344,5 +508,9 @@ onBeforeUnmount(() => {
   color: #ff7a2f;
   font-size: 18px;
   font-weight: 700;
+}
+
+.chart-box--tall {
+  height: 400px;
 }
 </style>

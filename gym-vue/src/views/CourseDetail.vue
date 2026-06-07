@@ -58,6 +58,79 @@
               {{ course.content || course.description || '暂无详细介绍' }}
             </div>
           </el-card>
+
+          <!-- 评论区 -->
+          <el-card shadow="never" class="comment-card">
+            <template #header>
+              <span class="card-header-title">评论（{{ totalComments }} 条）</span>
+            </template>
+
+            <!-- 输入区 -->
+            <div class="comment-input-wrap">
+              <div v-if="replyTarget" class="reply-tip">
+                回复 <strong>@{{ replyTarget.username }}</strong>
+                <el-button text size="small" class="cancel-reply" @click="replyTarget = null">× 取消</el-button>
+              </div>
+              <el-input
+                v-model="commentContent"
+                type="textarea"
+                :rows="3"
+                :placeholder="replyTarget ? `回复 @${replyTarget.username}...` : '说点什么...'"
+                maxlength="500"
+                show-word-limit
+              />
+              <div class="input-actions">
+                <el-button type="primary" size="small" @click="submitComment">发布</el-button>
+              </div>
+            </div>
+
+            <!-- 评论列表 -->
+            <div v-if="comments.length === 0" class="empty-comments">暂无评论，来发表第一条吧！</div>
+            <div v-else class="comment-list">
+              <div v-for="comment in comments" :key="comment.id" class="comment-item">
+                <!-- 顶级评论 -->
+                <div class="comment-meta">
+                  <span class="comment-author">{{ comment.nickname || comment.username }}</span>
+                  <span class="comment-time">{{ formatTime(comment.createTime) }}</span>
+                  <div class="comment-actions">
+                    <el-button text size="small" @click="handleReply(comment)">回复</el-button>
+                    <el-button
+                      v-if="canDelete(comment)"
+                      text
+                      size="small"
+                      type="danger"
+                      @click="handleDelete(comment.id)"
+                    >删除</el-button>
+                  </div>
+                </div>
+                <div class="comment-content">{{ comment.content }}</div>
+
+                <!-- 子评论 -->
+                <div v-if="comment.replies && comment.replies.length > 0" class="reply-list">
+                  <div v-for="reply in comment.replies" :key="reply.id" class="reply-item">
+                    <div class="comment-meta">
+                      <span class="comment-author">{{ reply.nickname || reply.username }}</span>
+                      <span class="comment-time">{{ formatTime(reply.createTime) }}</span>
+                      <div class="comment-actions">
+                        <el-button text size="small" @click="handleReply(reply)">回复</el-button>
+                        <el-button
+                          v-if="canDelete(reply)"
+                          text
+                          size="small"
+                          type="danger"
+                          @click="handleDelete(reply.id)"
+                        >删除</el-button>
+                      </div>
+                    </div>
+                    <div class="comment-content">
+                      <span v-if="reply.parentUsername" class="reply-at">@{{ reply.parentUsername }} </span>
+                      {{ reply.content }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </el-card>
         </el-col>
 
         <!-- 右侧预约栏 -->
@@ -133,6 +206,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import dayjs from 'dayjs'
 import { getCourse } from '../api/course'
 import { createBooking } from '../api/booking'
+import { listComments, addComment, deleteComment } from '../api/comment'
 import { LOW_STOCK_THRESHOLD } from '../constants/booking'
 
 const router = useRouter()
@@ -142,6 +216,19 @@ const loading = ref(true)
 const error = ref(false)
 const course = ref(null)
 const booking = ref(false)
+
+const comments = ref([])
+const commentContent = ref('')
+const replyTarget = ref(null)
+
+const currentUser = JSON.parse(localStorage.getItem('user') || '{}')
+
+const totalComments = computed(() => {
+  return comments.value.reduce((sum, c) => sum + 1 + (c.replies?.length || 0), 0)
+})
+
+const canDelete = (comment) =>
+  currentUser.role === 'admin' || comment.userId === currentUser.id
 
 const courseId = computed(() => route.params.id)
 
@@ -251,7 +338,68 @@ const handleBook = async () => {
 
 const goBack = () => router.push('/course')
 
-onMounted(() => loadCourse())
+const loadComments = async () => {
+  try {
+    const res = await listComments(courseId.value)
+    if (res.code === '200') {
+      comments.value = res.data || []
+    }
+  } catch (e) {
+    console.error('加载评论失败', e)
+  }
+}
+
+const submitComment = async () => {
+  if (!localStorage.getItem('user')) {
+    ElMessage.error('请先登录')
+    router.push('/login')
+    return
+  }
+  if (!commentContent.value.trim()) {
+    ElMessage.warning('评论内容不能为空')
+    return
+  }
+  try {
+    const res = await addComment({
+      courseId: course.value.id,
+      content: commentContent.value.trim(),
+      parentId: replyTarget.value?.id || null
+    })
+    if (res.code === '200') {
+      commentContent.value = ''
+      replyTarget.value = null
+      await loadComments()
+    }
+  } catch (e) {
+    console.error('发布评论失败', e)
+  }
+}
+
+const handleReply = (comment) => {
+  replyTarget.value = { id: comment.id, username: comment.nickname || comment.username }
+}
+
+const handleDelete = async (id) => {
+  try {
+    await ElMessageBox.confirm('确定删除这条评论吗？', '提示', {
+      confirmButtonText: '删除',
+      cancelButtonText: '取消',
+      type: 'warning'
+    })
+    const res = await deleteComment(id)
+    if (res.code === '200') {
+      ElMessage.success('已删除')
+      await loadComments()
+    }
+  } catch (_) {
+    // 用户取消
+  }
+}
+
+onMounted(() => {
+  loadCourse()
+  loadComments()
+})
 </script>
 
 <style scoped>
@@ -453,6 +601,113 @@ onMounted(() => loadCourse())
 
 .book-btn {
   width: 100%;
+}
+
+/* 评论区 */
+.comment-card {
+  border: none;
+  border-radius: 12px;
+  margin-top: 20px;
+}
+
+.comment-card :deep(.el-card__body) {
+  padding: 24px;
+}
+
+.comment-input-wrap {
+  margin-bottom: 24px;
+}
+
+.reply-tip {
+  font-size: 13px;
+  color: #606266;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cancel-reply {
+  padding: 0;
+  color: #909399;
+}
+
+.input-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.empty-comments {
+  text-align: center;
+  color: #c0c4cc;
+  font-size: 14px;
+  padding: 24px 0;
+}
+
+.comment-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.comment-item {
+  border-bottom: 1px solid #f5f7fa;
+  padding-bottom: 16px;
+}
+
+.comment-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.comment-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.comment-author {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1f2d3d;
+}
+
+.comment-time {
+  font-size: 12px;
+  color: #c0c4cc;
+  flex: 1;
+}
+
+.comment-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.comment-content {
+  font-size: 14px;
+  color: #606266;
+  line-height: 1.6;
+}
+
+.reply-at {
+  color: #409eff;
+  font-weight: 500;
+}
+
+.reply-list {
+  margin-top: 12px;
+  margin-left: 16px;
+  padding-left: 16px;
+  border-left: 2px solid #f0f2f5;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.reply-item {
+  font-size: 13px;
 }
 
 /* 响应式 */

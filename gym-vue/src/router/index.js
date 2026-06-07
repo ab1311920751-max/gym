@@ -31,9 +31,11 @@ const routes = [
                 component: () => import('../views/PaySuccess.vue'),
                 meta: { title: '支付结果' }
             },
+            { path: 'notice',       name: 'Notice',       component: () => import('../views/Notice.vue') },
             // 管理员页面：命名必须以 admin- 开头，否则会绕过下方的权限拦截
-            { path: 'admin-course', name: 'AdminCourse', component: () => import('../views/AdminCourse.vue') },
-            { path: 'admin-user',   name: 'AdminUser',   component: () => import('../views/AdminUser.vue') }
+            { path: 'admin-course',  name: 'AdminCourse',  component: () => import('../views/AdminCourse.vue') },
+            { path: 'admin-user',    name: 'AdminUser',    component: () => import('../views/AdminUser.vue') },
+            { path: 'admin-notice',  name: 'AdminNotice',  component: () => import('../views/AdminNotice.vue') }
         ]
     },
     { path: '/login', name: 'Login', component: () => import('../views/Login.vue') }

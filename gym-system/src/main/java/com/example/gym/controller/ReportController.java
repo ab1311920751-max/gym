@@ -7,15 +7,22 @@ import com.example.gym.entity.SysUser;
 import com.example.gym.entity.enums.BookingStatus;
 import com.example.gym.service.BookingService;
 import com.example.gym.service.UserService;
+import com.example.gym.vo.DailyTrendVO;
+import com.example.gym.vo.RankItemVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * 数据报表控制器，为管理员数据驾驶舱（Home.vue）提供统计数据。
@@ -72,6 +79,31 @@ public class ReportController {
                 Map.of("name", "月卡 VIP", "value", monthVip),
                 Map.of("name", "年卡 VIP", "value", yearVip)
         ));
+
+        // 5. 近 7 天订单与营收趋势（空日期补 0，保证前端始终拿到 7 个点）
+        List<DailyTrendVO> dbTrend = bookingService.getDailyTrend(7);
+        DateTimeFormatter mmdd = DateTimeFormatter.ofPattern("MM-dd");
+        Map<String, DailyTrendVO> trendMap = dbTrend.stream()
+                .collect(Collectors.toMap(DailyTrendVO::getDate, Function.identity()));
+        List<Map<String, Object>> trendData = new ArrayList<>();
+        for (int i = 6; i >= 0; i--) {
+            String dateKey = LocalDate.now().minusDays(i).format(mmdd);
+            DailyTrendVO item = trendMap.get(dateKey);
+            trendData.add(Map.of(
+                    "date", dateKey,
+                    "bookingCount", item != null ? item.getBookingCount() : 0,
+                    "revenue", item != null ? item.getRevenue() : BigDecimal.ZERO
+            ));
+        }
+        map.put("trendData", trendData);
+
+        // 6. 课程热度 TOP 8
+        List<RankItemVO> courseRank = bookingService.getCourseRank(8);
+        map.put("courseRank", courseRank);
+
+        // 7. 课程分类预约分布
+        List<RankItemVO> categoryData = bookingService.getCategoryStats();
+        map.put("categoryData", categoryData);
 
         return Result.success(map);
     }

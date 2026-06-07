@@ -3,6 +3,8 @@ package com.example.gym.service;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.example.gym.entity.CourseBooking;
 import com.example.gym.vo.BookingVO;
+import com.example.gym.vo.DailyTrendVO;
+import com.example.gym.vo.RankItemVO;
 
 import java.util.List;
 
@@ -49,4 +51,13 @@ public interface BookingService extends IService<CourseBooking> {
      * 仅在 canPay() 为 true 时才执行更新，保证幂等性。
      */
     void paySuccess(String bookingNo, String alipayTradeNo);
+
+    /** 近 days 天每日已支付订单量与营收，供驾驶舱趋势图使用 */
+    List<DailyTrendVO> getDailyTrend(int days);
+
+    /** 课程热度 TOP limit，按已支付预约数降序，供驾驶舱排行图使用 */
+    List<RankItemVO> getCourseRank(int limit);
+
+    /** 各课程分类已支付预约量分布，供驾驶舱分类图使用 */
+    List<RankItemVO> getCategoryStats();
 }

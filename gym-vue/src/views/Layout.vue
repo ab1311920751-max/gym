@@ -52,6 +52,11 @@
             <span>AI 客服</span>
           </el-menu-item>
 
+          <el-menu-item index="/notice">
+            <el-icon><Bell /></el-icon>
+            <span>系统公告</span>
+          </el-menu-item>
+
           <el-sub-menu index="admin" v-if="user.role === ROLE.ADMIN">
             <template #title>
               <el-icon><Setting /></el-icon>
@@ -64,6 +69,10 @@
             <el-menu-item index="/admin-course">
               <el-icon><Tickets /></el-icon>
               <span>课程管理</span>
+            </el-menu-item>
+            <el-menu-item index="/admin-notice">
+              <el-icon><Bell /></el-icon>
+              <span>公告管理</span>
             </el-menu-item>
           </el-sub-menu>
         </el-menu>
@@ -140,7 +149,8 @@ import {
   UserFilled,
   Lock,
   SwitchButton,
-  Tickets
+  Tickets,
+  Bell
 } from '@element-plus/icons-vue'
 import { ROLE } from '../constants/role'
 
